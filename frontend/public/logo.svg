@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a365d"/>
+      <stop offset="100%" stop-color="#0f2847"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  
+  <!-- Grid lines (subtle) -->
+  <g stroke="#ffffff" stroke-opacity="0.06" stroke-width="1">
+    <line x1="80" y1="180" x2="432" y2="180"/>
+    <line x1="80" y1="260" x2="432" y2="260"/>
+    <line x1="80" y1="340" x2="432" y2="340"/>
+  </g>
+  
+  <!-- Candlestick bars (background, subtle) -->
+  <g fill="#ffffff" fill-opacity="0.08">
+    <rect x="100" y="220" width="24" height="100" rx="4"/>
+    <rect x="150" y="200" width="24" height="110" rx="4"/>
+    <rect x="200" y="250" width="24" height="80" rx="4"/>
+    <rect x="250" y="190" width="24" height="120" rx="4"/>
+    <rect x="300" y="230" width="24" height="90" rx="4"/>
+    <rect x="350" y="170" width="24" height="130" rx="4"/>
+  </g>
+  
+  <!-- Stock trend line -->
+  <polyline
+    points="90,340 130,310 170,320 210,270 250,290 300,220 340,200 390,150 430,130"
+    fill="none"
+    stroke="#DAA520"
+    stroke-width="8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  
+  <!-- Trend line glow -->
+  <polyline
+    points="90,340 130,310 170,320 210,270 250,290 300,220 340,200 390,150 430,130"
+    fill="none"
+    stroke="#DAA520"
+    stroke-width="16"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-opacity="0.15"
+  />
+  
+  <!-- Data points -->
+  <g fill="#00C896">
+    <circle cx="90"  cy="340" r="8"/>
+    <circle cx="130" cy="310" r="8"/>
+    <circle cx="170" cy="320" r="8"/>
+    <circle cx="210" cy="270" r="8"/>
+    <circle cx="250" cy="290" r="8"/>
+    <circle cx="300" cy="220" r="8"/>
+    <circle cx="340" cy="200" r="8"/>
+    <circle cx="390" cy="150" r="8"/>
+  </g>
+  
+  <!-- Final point (highlighted) -->
+  <circle cx="430" cy="130" r="12" fill="#DAA520"/>
+  <circle cx="430" cy="130" r="18" fill="#DAA520" fill-opacity="0.25"/>
+  
+  <!-- Arrow at the end -->
+  <polygon
+    points="430,130 420,148 426,138 410,142"
+    fill="#DAA520"
+  />
+</svg>
