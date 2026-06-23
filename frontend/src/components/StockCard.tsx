@@ -2,6 +2,7 @@ import React from 'react';
 import { MinusOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import { StockQuote } from '../types';
 import { UP, DOWN, NEUTRAL, fmt } from './constants';
+import { useValueFlash } from './useFlash';
 
 interface StockCardProps {
   data: StockQuote | null;
@@ -9,6 +10,17 @@ interface StockCardProps {
   flash: boolean;
   colorClass: string;
   market: string;
+}
+
+/** 数据格子 — 带值变化闪烁 */
+function DataCell({ label, value, colorClass }: { label: string; value: string; colorClass?: string }) {
+  const flash = useValueFlash(value);
+  return (
+    <div className="data-cell">
+      <span className="data-label">{label}</span>
+      <span className={`data-value ${colorClass || ''} ${flash ? 'value-flash' : ''}`}>{value}</span>
+    </div>
+  );
 }
 
 const StockCard = React.memo(function StockCard({ data, loading, flash, colorClass, market }: StockCardProps) {
@@ -40,19 +52,12 @@ const StockCard = React.memo(function StockCard({ data, loading, flash, colorCla
           </div>
         </div>
         <div className="data-grid">
-          {[
-            ['今开', data.open.toFixed(2)],
-            ['最高', data.high.toFixed(2), closed ? '' : 'data-value--up'],
-            ['昨收', data.pre_close.toFixed(2)],
-            ['最低', data.low.toFixed(2), closed ? '' : 'data-value--down'],
-            ['成交量', fmt(data.volume)],
-            ['成交额', fmt(data.amount)],
-          ].map(([l,v,c]) => (
-            <div className="data-cell" key={l}>
-              <span className="data-label">{l}</span>
-              <span className={`data-value ${c||''}`}>{v}</span>
-            </div>
-          ))}
+          <DataCell label="今开" value={data.open.toFixed(2)} />
+          <DataCell label="最高" value={data.high.toFixed(2)} colorClass={closed ? '' : 'data-value--up'} />
+          <DataCell label="昨收" value={data.pre_close.toFixed(2)} />
+          <DataCell label="最低" value={data.low.toFixed(2)} colorClass={closed ? '' : 'data-value--down'} />
+          <DataCell label="成交量" value={fmt(data.volume)} />
+          <DataCell label="成交额" value={fmt(data.amount)} />
         </div>
         {market==='A' && (data.pe_ratio>0 || data.pb_ratio>0) && (
           <div className="stock-footer">

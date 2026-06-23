@@ -272,9 +272,13 @@ body { font-family: var(--font-sans); background: var(--bg-page); color: var(--t
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   text-align: right;
+  transition: color 0.3s ease, background 0.3s ease;
+  border-radius: 0.25rem;
+  padding: 0 0.125rem;
 }
 .data-value--up { color: var(--color-up); }
 .data-value--down { color: var(--color-down); }
+.data-value.value-flash { animation: valueHighlight 0.6s ease-out; }
 
 .stock-footer { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 0.0625rem solid var(--border-light); display: flex; gap: var(--space-sm); }
 .pill {
@@ -298,6 +302,9 @@ body { font-family: var(--font-sans); background: var(--bg-page); color: var(--t
   line-height: 1;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  transition: color 0.3s ease, background 0.3s ease;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
 }
 .commodity-delta {
   font-size: 0.8125rem;
@@ -305,6 +312,9 @@ body { font-family: var(--font-sans); background: var(--bg-page); color: var(--t
   margin-top: 0.375rem;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  transition: color 0.3s ease, background 0.3s ease;
+  border-radius: 0.25rem;
+  padding: 0 0.125rem;
 }
 
 /* 公告列表 — clean rows, subtle hover */
@@ -362,6 +372,10 @@ body { font-family: var(--font-sans); background: var(--bg-page); color: var(--t
 @keyframes cardEnter {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes valueHighlight {
+  0% { background: rgba(218, 165, 32, 0.15); }
+  100% { background: transparent; }
 }
 
 /* Confidence meter — simple bar, no animation */

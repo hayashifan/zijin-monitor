@@ -2,6 +2,7 @@ import React from 'react';
 import { GoldOutlined, ThunderboltOutlined, FireOutlined } from '@ant-design/icons';
 import { CommodityPrice } from '../types';
 import { UP, DOWN, NEUTRAL } from './constants';
+import { useValueFlash } from './useFlash';
 
 const cfg: Record<string, { title: string; icon: React.ReactNode; color: string; cls: string }> = {
   gold:       { title: '黄金',  icon: <GoldOutlined/>,        color: '#DAA520', cls: 'card--gold' },
@@ -25,13 +26,16 @@ const CommodityCard = React.memo(function CommodityCard({ data, type, loading }:
   const arrow = zero ? '' : up ? '↑' : '↓';
   const isUSD = data.currency === 'USD';
 
+  const priceFlash = useValueFlash(data.price);
+  const changeFlash = useValueFlash(data.change_percent);
+
   return (
     <div className={`card ${c.cls}`}>
       <div className="card-body commodity">
         <div className="commodity-icon" style={{color:c.color}}>{c.icon} {c.title}</div>
-        <div className="commodity-value" style={{color:c.color}}>{data.price.toFixed(2)}</div>
+        <div className={`commodity-value ${priceFlash ? 'value-flash' : ''}`} style={{color:c.color}}>{data.price.toFixed(2)}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.375rem' }}>
-          <span className="commodity-delta" style={{color:dColor}}>{arrow} {zero?'0.00%':`${up?'+':''}${data.change_percent.toFixed(2)}%`}</span>
+          <span className={`commodity-delta ${changeFlash ? 'value-flash' : ''}`} style={{color:dColor}}>{arrow} {zero?'0.00%':`${up?'+':''}${data.change_percent.toFixed(2)}%`}</span>
           <span style={{
             fontSize: '0.625rem',
             fontWeight: 500,
