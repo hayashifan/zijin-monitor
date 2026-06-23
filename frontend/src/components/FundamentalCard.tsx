@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Row, Col } from 'antd';
-import { FundOutlined, DollarOutlined, RiseOutlined, FallOutlined } from '@ant-design/icons';
+import { FundOutlined, DollarOutlined } from '@ant-design/icons';
 import { FinancialOverview } from '../types';
 import { UP, DOWN, NEUTRAL } from './constants';
 
@@ -40,6 +40,15 @@ const FundamentalCard = React.memo(function FundamentalCard({ data, loading }: F
     }
     return { maxRevenue: mr, maxProfit: mp };
   }, [trend]);
+
+  if (loading && !data) {
+    return (
+      <div className="card">
+        <div className="card-head"><FundOutlined style={{ color: 'var(--accent)' }} /> 基本面数据</div>
+        <div className="card-body"><div className="empty">加载中...</div></div>
+      </div>
+    );
+  }
 
   if (!metrics && !trend.length) {
     return (
@@ -99,7 +108,7 @@ const FundamentalCard = React.memo(function FundamentalCard({ data, loading }: F
               {trend.slice(0, 6).reverse().map((item, i) => {
                 const dateLabel = item.report_date.length >= 10 ? item.report_date.slice(5, 10) : item.report_date;
                 return (
-                  <div key={i} className="profit-trend-row">
+                  <div key={item.report_date} className="profit-trend-row">
                     <span className="profit-trend-date">{dateLabel}</span>
                     <div className="profit-trend-bars">
                       <MiniBar value={item.revenue} max={maxRevenue} color="var(--accent)" />

@@ -10,6 +10,16 @@ import asyncio
 from datetime import datetime
 from typing import Optional, Dict, List
 
+# akshare 并发限制（避免线程池耗尽）
+_AKSHARE_SEMAPHORE = None  # 延迟初始化
+
+def _get_semaphore():
+    global _AKSHARE_SEMAPHORE
+    if _AKSHARE_SEMAPHORE is None:
+        import asyncio
+        _AKSHARE_SEMAPHORE = asyncio.Semaphore(2)
+    return _AKSHARE_SEMAPHORE
+
 # 持久化缓存目录
 _CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'fundamental_cache')
 os.makedirs(_CACHE_DIR, exist_ok=True)
@@ -19,6 +29,7 @@ _CACHE_TTL = {
     'financial': 86400,   # 财务摘要 24小时
     'metrics': 3600,      # 估值指标 1小时
     'profit': 86400,      # 盈利趋势 24小时
+    'overview': 3600,     # 概览 1小时
 }
 
 
@@ -68,6 +79,15 @@ def _get_valid_data(key: str, ttl_key: str) -> Optional[dict]:
 class FundamentalService:
     """公司基本面数据服务（磁盘持久化缓存）"""
 
+    @staticmethod
+    def _safe_float(val, default=0.0):
+        if val is None or val == '' or val == '--' or val == 'N/A':
+            return default
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return default
+
     def __init__(self):
         self._memory_cache: Dict[str, tuple] = {}
         self._memory_ttl = 300  # 内存缓存5分钟
@@ -98,21 +118,23 @@ class FundamentalService:
 
         # 2. 尝试API
         try:
-            df = await asyncio.to_thread(ak.stock_financial_abstract_ths, stock_code, "按报告期")
+            sem = _get_semaphore()
+            async with sem:
+                df = await asyncio.to_thread(ak.stock_financial_abstract_ths, stock_code, "按报告期")
             if df is not None and not df.empty:
-                latest_data = df.head(4)
+                latest_data = df.head(4).to_dict('records')
                 financial_data = []
-                for _, row in latest_data.iterrows():
+                for row in latest_data:
                     financial_data.append({
                         'report_date': str(row.get('报告期', '')),
                         'report_type': row.get('报告类型', ''),
-                        'revenue': float(row.get('营业总收入', 0) or 0),
-                        'net_profit': float(row.get('净利润', 0) or 0),
-                        'gross_margin': float(row.get('毛利率', 0) or 0),
-                        'net_margin': float(row.get('净利率', 0) or 0),
-                        'roe': float(row.get('净资产收益率', 0) or 0),
-                        'eps': float(row.get('基本每股收益', 0) or 0),
-                        'bvps': float(row.get('每股净资产', 0) or 0),
+                        'revenue': self._safe_float(row.get('营业总收入', 0)),
+                        'net_profit': self._safe_float(row.get('净利润', 0)),
+                        'gross_margin': self._safe_float(row.get('毛利率', 0)),
+                        'net_margin': self._safe_float(row.get('净利率', 0)),
+                        'roe': self._safe_float(row.get('净资产收益率', 0)),
+                        'eps': self._safe_float(row.get('基本每股收益', 0)),
+                        'bvps': self._safe_float(row.get('每股净资产', 0)),
                     })
                 result = {
                     'stock_code': stock_code,
@@ -144,18 +166,20 @@ class FundamentalService:
             return cached
 
         try:
-            df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
+            sem = _get_semaphore()
+            async with sem:
+                df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
             stock_info = df[df['代码'] == stock_code]
             if not stock_info.empty:
                 row = stock_info.iloc[0]
                 result = {
                     'stock_code': stock_code,
-                    'pe_ratio': float(row.get('市盈率-动态', 0) or 0),
-                    'pb_ratio': float(row.get('市净率', 0) or 0),
-                    'total_market_cap': float(row.get('总市值', 0) or 0),
-                    'circulating_market_cap': float(row.get('流通市值', 0) or 0),
-                    'turnover_rate': float(row.get('换手率', 0) or 0),
-                    'volume_ratio': float(row.get('量比', 0) or 0),
+                    'pe_ratio': self._safe_float(row.get('市盈率-动态', 0)),
+                    'pb_ratio': self._safe_float(row.get('市净率', 0)),
+                    'total_market_cap': self._safe_float(row.get('总市值', 0)),
+                    'circulating_market_cap': self._safe_float(row.get('流通市值', 0)),
+                    'turnover_rate': self._safe_float(row.get('换手率', 0)),
+                    'volume_ratio': self._safe_float(row.get('量比', 0)),
                     'from_cache': False,
                 }
                 self._set_memory(cache_key, result)
@@ -181,15 +205,17 @@ class FundamentalService:
             return cached
 
         try:
-            df = await asyncio.to_thread(ak.stock_profit_sheet_by_report_em, stock_code)
+            sem = _get_semaphore()
+            async with sem:
+                df = await asyncio.to_thread(ak.stock_profit_sheet_by_report_em, stock_code)
             if df is not None and not df.empty:
                 trend_data = []
-                for _, row in df.head(periods).iterrows():
+                for row in df.head(periods).to_dict('records'):
                     trend_data.append({
                         'report_date': str(row.get('REPORT_DATE', '')),
-                        'revenue': float(row.get('TOTAL_OPERATE_INCOME', 0) or 0),
-                        'net_profit': float(row.get('NETPROFIT', 0) or 0),
-                        'gross_profit': float(row.get('TOTAL_PROFIT', 0) or 0),
+                        'revenue': self._safe_float(row.get('TOTAL_OPERATE_INCOME', 0)),
+                        'net_profit': self._safe_float(row.get('NETPROFIT', 0)),
+                        'total_profit': self._safe_float(row.get('TOTAL_PROFIT', 0)),
                     })
                 self._set_memory(cache_key, trend_data)
                 _save_disk_cache(cache_key, trend_data, 'profit')
@@ -212,6 +238,13 @@ class FundamentalService:
         cached = self._get_memory(cache_key)
         if cached:
             return cached
+
+        # 磁盘缓存兜底
+        disk_data = _get_valid_data(cache_key, 'overview')
+        if disk_data:
+            disk_data['from_cache'] = True
+            self._set_memory(cache_key, disk_data)
+            return disk_data
 
         # 并发获取三个数据源
         metrics_task = self.get_key_metrics(stock_code)
@@ -265,6 +298,7 @@ class FundamentalService:
         }
 
         self._set_memory(cache_key, result)
+        _save_disk_cache(cache_key, result, 'overview')
         return result
 
 

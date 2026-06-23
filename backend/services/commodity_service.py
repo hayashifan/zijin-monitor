@@ -50,7 +50,7 @@ class CommodityService:
                 resp.encoding = 'gbk'
                 if '="' not in resp.text:
                     return ''
-                return resp.text.split('="')[1].rstrip('"')
+                return resp.text.split('="')[1].rstrip('";')
             except Exception as e:
                 if attempt < self._max_retries - 1:
                     time.sleep(self._retry_delay * (attempt + 1))

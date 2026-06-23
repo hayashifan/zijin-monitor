@@ -67,7 +67,7 @@ export interface ProfitTrendItem {
   report_date: string;
   revenue: number;
   net_profit: number;
-  gross_profit: number;
+  total_profit: number;
 }
 
 export interface FinancialOverview {
