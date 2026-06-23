@@ -51,13 +51,13 @@ cd backend && python main.py
 cd frontend && npm run dev
 ```
 
-访问 http://localhost:5173
+访问 http://localhost:5174
 
 ## 📁 项目结构
 
 ```
 ├── backend/                 # Python FastAPI 后端
-│   ├── main.py              # 入口 (端口3001)
+│   ├── main.py              # 入口 (端口3002)
 │   ├── config.py            # 配置管理
 │   ├── database.py          # SQLite 操作
 │   ├── services/            # 业务逻辑层
@@ -98,9 +98,9 @@ cd frontend && npm run dev
 复制 `backend/.env.example` 为 `backend/.env`：
 
 ```bash
-PORT=3001                    # 后端端口
+PORT=3002                    # 后端端口
 DATABASE_PATH=../data/zijin_monitor.db  # 数据库路径
-CORS_ORIGIN=http://localhost:5173       # 前端地址
+CORS_ORIGIN=http://localhost:5174       # 前端地址
 SINA_API_TIMEOUT=10          # API超时(秒)
 CACHE_TTL_SECONDS=300        # 缓存TTL(秒)
 STOCK_CODES=A:601899,HK:02899  # 监控股票

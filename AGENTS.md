@@ -9,23 +9,23 @@
 ## 架构
 
 - `backend/` 是后端：Python 3.11、FastAPI、uvicorn、SQLite 存储、服务层（`services/`）和路由层（`routers/`）。
-- `frontend/` 是前端：React 18、TypeScript、Vite、Ant Design 5、Axios。Vite 将 `/api` 代理到后端 `3001` 端口。
+- `frontend/` 是前端：React 18、TypeScript、Vite、Ant Design 5、Axios。Vite 将 `/api` 代理到后端 `3002` 端口。
 - `backend/zijin_monitor.db` 是 SQLite 数据库，存储行情缓存和公告数据。只有在任务确实需要调整种子数据或配置时才修改。
 - 数据源为新浪财经 API（免费），无需 API Key。
-- 前端 API 调用统一走 `/api`；Vite 代理到后端 `3001` 端口。
+- 前端 API 调用统一走 `/api`；Vite 代理到后端 `3002` 端口。
 
 ## 命令
 
 在对应子项目目录下执行命令。前后端命令需要分别执行。
 
 ```bash
-# 后端 (端口 3001)
+# 后端 (端口 3002)
 cd backend
 ./venv/Scripts/python.exe main.py
 ```
 
 ```bash
-# 前端 (端口 5173)
+# 前端 (端口 5174)
 cd frontend
 npm run dev
 ```
@@ -36,7 +36,7 @@ npm run dev
 
 - 保持 Python 3.11 兼容，使用 FastAPI + uvicorn。
 - 服务层放在 `backend/services/`：`stock_service.py`（A 股/H 股行情）、`commodity_service.py`（大宗商品）、`announcement_service.py`（公告）、`fundamental_service.py`（基本面）。
-- 路由层放在 `backend/routers/`：`stock.py`、`commodity.py`、`announcement.py`、`fundamental.py`，分别对应 `main.py` 中的路由前缀。
+- 路由层放在 `backend/routers/`：`stock.py`、`commodity.py`、`announcement.py`、`fundamental.py`、`quant.py`，分别对应 `main.py` 中的路由前缀。
 - 数据库操作集中在 `backend/database.py`，使用 `aiosqlite` 异步驱动。
 - 新增服务应沿用现有服务模式，保持服务层与路由层职责分离。
 - API 响应结构应与现有路由保持一致。

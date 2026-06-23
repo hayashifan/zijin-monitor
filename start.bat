@@ -7,7 +7,7 @@ echo   Zijin Stock Monitor - Starting...
 echo ========================================
 
 REM Start backend
-echo [1/2] Starting backend on port 3001...
+echo [1/2] Starting backend on port 3002...
 cd /d "%~dp0backend"
 start "Backend" ./venv/Scripts/python.exe main.py
 timeout /t 2 /nobreak >nul
@@ -19,10 +19,10 @@ start "Frontend" cmd /k "npm run dev"
 
 echo ========================================
 echo   Services started!
-echo   Backend:  http://localhost:3001
-echo   Frontend: http://localhost:5173
+echo   Backend:  http://localhost:3002
+echo   Frontend: http://localhost:5174
 echo ========================================
 timeout /t 5 /nobreak >nul
-start http://localhost:5173
+start http://localhost:5174
 echo Press any key to close...
 pause >nul

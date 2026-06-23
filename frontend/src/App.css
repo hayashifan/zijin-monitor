@@ -178,3 +178,8 @@ body { font-family: var(--font-sans); background: var(--bg-page); color: var(--t
 ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 0.1875rem; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-medium); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+.market-badge { display: inline-flex; align-items: center; justify-content: center; padding: 1px 6px; border-radius: 4px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em; background: var(--accent); color: #fff; line-height: 1.4; flex-shrink: 0; }
+
+.kline-card { overflow: visible; }
+.kline-card .card-body { overflow: visible; }

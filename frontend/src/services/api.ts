@@ -43,4 +43,10 @@ export const fundamentalAPI = {
     api.get('/api/fundamental/profit-trend', { params: { code, periods } }),
 };
 
+// Quant Analysis API
+export const quantAPI = {
+  getLatest: () => api.get('/api/quant/latest'),
+  getList: (limit: number = 10) => api.get('/api/quant/list', { params: { limit } }),
+};
+
 export default api;

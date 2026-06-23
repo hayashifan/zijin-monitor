@@ -13,9 +13,9 @@ _BACKEND_DIR = Path(__file__).resolve().parent
 load_dotenv(_BACKEND_DIR / ".env")
 
 # ── 从环境变量读取配置 ──────────────────────────────
-PORT = int(os.getenv("PORT", "3001"))
+PORT = int(os.getenv("PORT", "3002"))
 DATABASE_PATH = os.getenv("DATABASE_PATH", "../data/zijin_monitor.db")
-CORS_ORIGIN = os.getenv("CORS_ORIGIN", "http://localhost:5173")
+CORS_ORIGIN = os.getenv("CORS_ORIGIN", "http://localhost:5174")
 SINA_API_TIMEOUT = int(os.getenv("SINA_API_TIMEOUT", "10"))
 CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "300"))
 STOCK_CODES = os.getenv("STOCK_CODES", "A:601899,HK:02899")
@@ -34,9 +34,9 @@ if BYPASS_SYSTEM_PROXY:
 
     requests.utils.get_environ_proxies = _no_proxy_environ
 
-    # 同时清除可能残留的环境变量
-    for _k in list(os.environ.keys()):
-        if "proxy" in _k.lower():
-            del os.environ[_k]
+    # 仅清除已知的代理环境变量，避免误删无关变量
+    for _k in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy",
+               "ALL_PROXY", "all_proxy", "NO_PROXY", "no_proxy"):
+        os.environ.pop(_k, None)
 
     print("[config] System proxy bypassed")

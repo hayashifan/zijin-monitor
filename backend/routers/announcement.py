@@ -1,7 +1,10 @@
+import logging
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from services.announcement_service import announcement_service
 from database import save_announcement
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -33,8 +36,11 @@ async def get_announcements(
             "page": page,
             "size": size
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Failed to get announcements")
+        raise HTTPException(status_code=500, detail="服务内部错误")
 
 @router.get("/detail/{announcement_id}")
 async def get_announcement_detail(announcement_id: str):
@@ -49,4 +55,5 @@ async def get_announcement_detail(announcement_id: str):
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Failed to get announcement detail")
+        raise HTTPException(status_code=500, detail="服务内部错误")

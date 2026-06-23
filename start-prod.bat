@@ -21,8 +21,8 @@ pm2 status
 echo ========================================
 
 echo.
-echo   Backend:  http://localhost:3001
-echo   Frontend: http://localhost:5173
+echo   Backend:  http://localhost:3002
+echo   Frontend: http://localhost:5174
 echo ========================================
 echo.
 echo Useful commands:

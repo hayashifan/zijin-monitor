@@ -1,6 +1,9 @@
+import logging
 from fastapi import APIRouter, HTTPException
 from services.commodity_service import commodity_service
 from database import save_commodity_price
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 

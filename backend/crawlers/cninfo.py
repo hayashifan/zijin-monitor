@@ -19,7 +19,7 @@ class CninfoCrawler(BaseCrawler):
             retries=2,
             retry_delay=2.0,
         )
-        self.base_url = "http://www.cninfo.com.cn/new/hisAnnouncement/query"
+        self.base_url = "https://www.cninfo.com.cn/new/hisAnnouncement/query"
     
     async def do_fetch(self) -> List[Dict[str, Any]]:
         """获取紫金矿业公告"""
