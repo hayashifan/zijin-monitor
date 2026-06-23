@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Row, Col, message } from 'antd';
 import {
-  ReloadOutlined, StockOutlined, LineChartOutlined,
+  ReloadOutlined, LineChartOutlined,
   FundOutlined,
 } from '@ant-design/icons';
 import { stockAPI, commodityAPI, announcementAPI, fundamentalAPI, quantAPI } from './services/api';
@@ -139,7 +139,7 @@ function App() {
       <nav className="nav">
         <div className="nav-inner">
           <a className="nav-brand" href="#">
-            <div className="nav-logo"><StockOutlined /></div>
+            <img src="/logo.svg" alt="Logo" className="nav-logo-img" />
             <span className="nav-title">紫金矿业监控器</span>
           </a>
           <div className="nav-right">
