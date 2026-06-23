@@ -4,6 +4,7 @@
 import requests
 import json
 import time
+import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
@@ -53,6 +54,12 @@ class StockService:
 
     def _set_cache(self, key: str, data):
         self._cache[key] = (data, time.time())
+        # 超过 100 条时淘汰过期条目
+        if len(self._cache) > 100:
+            now = time.time()
+            expired = [k for k, (_, ts) in self._cache.items() if now - ts > 600]
+            for k in expired:
+                del self._cache[k]
 
     def _safe_float(self, val: str, default: float = 0.0) -> float:
         if not val or val.strip() in ('--', 'N/A', '', 'None'):
@@ -96,7 +103,7 @@ class StockService:
             else:
                 return None
 
-            data = self._get_sina(f'{prefix}{stock_code}')
+            data = await asyncio.to_thread(self._get_sina, f'{prefix}{stock_code}')
             if not data:
                 return None
 
@@ -171,7 +178,7 @@ class StockService:
             return result
 
         try:
-            data = self._get_sina(f'hk{stock_code}')
+            data = await asyncio.to_thread(self._get_sina, f'hk{stock_code}')
             if not data:
                 return None
 
@@ -233,7 +240,7 @@ class StockService:
                     f"/var%20_{prefix}{stock_code}_kline=/CN_MarketDataService.getKLineData"
                     f"?symbol={prefix}{stock_code}&scale=240&ma=no&datalen={days}"
                 )
-                resp = self.session.get(url, timeout=10)
+                resp = await asyncio.to_thread(self.session.get, url, timeout=10)
                 content = resp.text
 
                 start = content.find('=(')

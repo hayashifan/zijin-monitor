@@ -2,6 +2,7 @@
 公告爬虫服务 - 东方财富 + 缓存
 """
 import requests
+import asyncio
 from datetime import datetime
 from typing import List, Dict, Optional
 import time
@@ -29,6 +30,11 @@ class AnnouncementService:
 
     def _set_cache(self, key: str, data: list):
         self._cache[key] = (data, time.time())
+        if len(self._cache) > 50:
+            now = time.time()
+            expired = [k for k, (_, ts) in self._cache.items() if now - ts > self._cache_ttl * 2]
+            for k in expired:
+                del self._cache[k]
 
     async def get_eastmoney_announcements(self, stock_code: str, page: int = 1, size: int = 20) -> List[Dict]:
         """从东方财富获取公告"""
@@ -57,7 +63,7 @@ class AnnouncementService:
                 'Referer': f'https://data.eastmoney.com/notices/detail/{stock_code}.html',
             }
 
-            response = self.session.get(url, params=params, headers=headers, timeout=15)
+            response = await asyncio.to_thread(self.session.get, url, params=params, headers=headers, timeout=15)
             response.raise_for_status()
             result = response.json()
 

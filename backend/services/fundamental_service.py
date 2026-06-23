@@ -6,6 +6,7 @@ import akshare as ak
 import json
 import os
 import time
+import asyncio
 from datetime import datetime
 from typing import Optional, Dict, List
 
@@ -80,6 +81,11 @@ class FundamentalService:
 
     def _set_memory(self, key: str, data):
         self._memory_cache[key] = (data, time.time())
+        if len(self._memory_cache) > 50:
+            now = time.time()
+            expired = [k for k, (_, ts) in self._memory_cache.items() if now - ts > self._memory_ttl * 2]
+            for k in expired:
+                del self._memory_cache[k]
 
     async def get_financial_summary(self, stock_code: str) -> Optional[Dict]:
         """获取公司财务摘要数据"""
@@ -92,7 +98,7 @@ class FundamentalService:
 
         # 2. 尝试API
         try:
-            df = ak.stock_financial_abstract_ths(symbol=stock_code, indicator="按报告期")
+            df = await asyncio.to_thread(ak.stock_financial_abstract_ths, stock_code, "按报告期")
             if df is not None and not df.empty:
                 latest_data = df.head(4)
                 financial_data = []
@@ -138,7 +144,7 @@ class FundamentalService:
             return cached
 
         try:
-            df = ak.stock_zh_a_spot_em()
+            df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
             stock_info = df[df['代码'] == stock_code]
             if not stock_info.empty:
                 row = stock_info.iloc[0]
@@ -175,7 +181,7 @@ class FundamentalService:
             return cached
 
         try:
-            df = ak.stock_profit_sheet_by_report_em(symbol=stock_code)
+            df = await asyncio.to_thread(ak.stock_profit_sheet_by_report_em, stock_code)
             if df is not None and not df.empty:
                 trend_data = []
                 for _, row in df.head(periods).iterrows():

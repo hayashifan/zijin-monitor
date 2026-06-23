@@ -35,8 +35,14 @@ class CommodityService:
 
     def _set_cache(self, key: str, data: dict):
         self._cache[key] = (data, time.time())
+        if len(self._cache) > 50:
+            now = time.time()
+            expired = [k for k, (_, ts) in self._cache.items() if now - ts > 600]
+            for k in expired:
+                del self._cache[k]
 
-    def _get_sina(self, code: str) -> str:
+    def _get_sina_sync(self, code: str) -> str:
+        """同步获取新浪数据（在线程中运行）"""
         for attempt in range(self._max_retries):
             try:
                 url = f"https://hq.sinajs.cn/list={code}"
@@ -44,7 +50,7 @@ class CommodityService:
                 resp.encoding = 'gbk'
                 if '="' not in resp.text:
                     return ''
-                return resp.text.split('="')[1].rstrip('";')
+                return resp.text.split('="')[1].rstrip('"')
             except Exception as e:
                 if attempt < self._max_retries - 1:
                     time.sleep(self._retry_delay * (attempt + 1))
@@ -52,7 +58,11 @@ class CommodityService:
                     print(f"[commodity] Sina API failed after {self._max_retries} attempts: {e}")
                     return ''
 
-    def _get_eastmoney_gold(self) -> Optional[dict]:
+    async def _get_sina(self, code: str) -> str:
+        """异步包装"""
+        return await asyncio.to_thread(self._get_sina_sync, code)
+
+    def _get_eastmoney_gold_sync(self) -> Optional[dict]:
         try:
             url = "https://push2.eastmoney.com/api/qt/stock/get"
             params = {
@@ -77,7 +87,7 @@ class CommodityService:
             print(f"[commodity] EastMoney gold fallback failed: {e}")
             return None
 
-    def _get_eastmoney_copper_lme(self) -> Optional[dict]:
+    def _get_eastmoney_copper_lme_sync(self) -> Optional[dict]:
         try:
             url = "https://push2.eastmoney.com/api/qt/stock/get"
             params = {
@@ -106,7 +116,7 @@ class CommodityService:
         cached = self._get_cached('gold')
         if cached:
             return cached
-        data = self._get_sina('hf_GC')
+        data = await self._get_sina('hf_GC')
         if data:
             try:
                 parts = data.split(',')
@@ -125,7 +135,7 @@ class CommodityService:
                     return result
             except Exception as e:
                 print(f"[commodity] Gold parse error: {e}")
-        result = self._get_eastmoney_gold()
+        result = await asyncio.to_thread(self._get_eastmoney_gold_sync)
         if result:
             self._set_cache('gold', result)
         return result
@@ -134,7 +144,7 @@ class CommodityService:
         cached = self._get_cached('copper_lme')
         if cached:
             return cached
-        data = self._get_sina('hf_HG')
+        data = await self._get_sina('hf_HG')
         if data:
             try:
                 parts = data.split(',')
@@ -153,7 +163,7 @@ class CommodityService:
                     return result
             except Exception as e:
                 print(f"[commodity] LME copper parse error: {e}")
-        result = self._get_eastmoney_copper_lme()
+        result = await asyncio.to_thread(self._get_eastmoney_copper_lme_sync)
         if result:
             self._set_cache('copper_lme', result)
         return result
@@ -168,7 +178,7 @@ class CommodityService:
         cached = self._get_cached('copper_shfe')
         if cached:
             return cached
-        data = self._get_sina('nf_CU0')
+        data = await self._get_sina('nf_CU0')
         if data:
             try:
                 parts = data.split(',')
