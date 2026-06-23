@@ -47,22 +47,21 @@ const AnnouncementCard = React.memo(function AnnouncementCard({ data, loading }:
           const color = catColor(item.category);
           const relTime = relativeTime(item.publish_date);
           return (
-            <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="list-item"
-              style={{ animationDelay: `${i * 0.05}s` }}>
-              <div className="list-icon" style={{background:`${color}10`}}>
-                <BankOutlined style={{color,fontSize:'0.875rem'}}/>
+            <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="list-item">
+              <div className="list-icon" style={{background:`${color}08`}}>
+                <BankOutlined style={{color:'var(--text-tertiary)',fontSize:'0.875rem'}}/>
               </div>
               <div className="list-content">
                 <div className="list-title">{item.title}</div>
                 <div className="list-meta">
-                  <span className="list-tag" style={{background:`${color}10`,color}}>{catLabel(item.category)}</span>
+                  <span className="list-tag" style={{background:`${color}0a`,color:`${color}cc`}}>{catLabel(item.category)}</span>
                   <span className="list-date">
                     <CalendarOutlined style={{marginRight:4}}/>
                     {relTime || item.publish_date}
                   </span>
                 </div>
               </div>
-              <LinkOutlined className="link-icon" style={{color:'var(--accent)',fontSize:'0.75rem',flexShrink:0}}/>
+              <LinkOutlined className="link-icon" style={{color:'var(--text-tertiary)',fontSize:'0.75rem',flexShrink:0}}/>
             </a>
           );
         })}

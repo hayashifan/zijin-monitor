@@ -76,7 +76,6 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
   if (data.data_points < 60) warnings.push(`样本仅 ${data.data_points} 天，统计显著性不足`);
 
   const cardBorderClass = allPassed ? 'card--quant-passed' : 'card--quant-failed';
-  const sharpeGlow = bt.sharpe_ratio > 1.5;
 
   return (
     <div className={`card ${cardBorderClass}`}>
@@ -89,8 +88,8 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
           {/* ── 操作建议（置顶） ── */}
           <Col span={24}>
             <div style={{
-              background: `${signalColor}10`,
-              border: `1px solid ${signalColor}30`,
+              background: `${signalColor}08`,
+              border: `1px solid ${signalColor}20`,
               borderRadius: 8,
               padding: '12px 16px',
               display: 'flex',
@@ -107,7 +106,7 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
                 </div>
               </div>
               <div style={{
-                background: `${confColor}18`,
+                background: `${confColor}12`,
                 color: confColor,
                 padding: '4px 10px',
                 borderRadius: 6,
@@ -117,7 +116,7 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
                 置信 {confidence}
               </div>
             </div>
-            {/* Confidence meter */}
+            {/* Confidence meter — simple bar, no animation */}
             <div className="confidence-meter-track">
               <div className="confidence-meter-fill" style={{ width: `${confPct}%`, background: confColor }} />
             </div>
@@ -127,7 +126,7 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
           <Col span={6}>
             <div className="metric-card metric-card--highlight">
               <div className="metric-label">夏普比率</div>
-              <div className={`metric-value metric-value--lg ${sharpeGlow ? 'sharpe-glow' : ''}`} style={{color: bt.sharpe_ratio > 1.1 ? UP : NEUTRAL}}>
+              <div className="metric-value metric-value--lg" style={{color: bt.sharpe_ratio > 1.1 ? UP : NEUTRAL}}>
                 {bt.sharpe_ratio.toFixed(2)}
               </div>
             </div>
@@ -160,7 +159,7 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
             <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
               {Object.entries(checks).map(([k, v]) => (
                 <span key={k} className="pill" style={{
-                  background: v ? `${UP}15` : `${DOWN}15`,
+                  background: v ? `${UP}10` : `${DOWN}10`,
                   color: v ? UP : DOWN,
                   fontSize: '0.7rem',
                   display: 'inline-flex',
@@ -185,8 +184,8 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
           {warnings.length > 0 && (
             <Col span={24}>
               <div style={{
-                background: '#DAA52008',
-                border: '1px solid #DAA52020',
+                background: '#DAA52006',
+                border: '1px solid #DAA52018',
                 borderRadius: 6,
                 padding: '8px 12px',
                 fontSize: '0.75rem',

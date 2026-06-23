@@ -24,33 +24,23 @@ const roeColor = (roe: number | undefined) => {
   return NEUTRAL;
 };
 
-/** 条形图组件 */
-function MiniBar({ value, max, color, delay }: { value: number; max: number; color: string; delay: number }) {
+/** 条形图组件 — no animation, just width */
+function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.min(Math.abs(value) / max * 100, 100) : 0;
   return (
     <div className="profit-bar-track">
-      <div className="profit-bar-fill" style={{ width: `${pct}%`, background: color, animationDelay: `${delay}s` }} />
+      <div className="profit-bar-fill" style={{ width: `${pct}%`, background: color }} />
     </div>
   );
 }
 
-/** 骨架屏 */
-function ShimmerSkeleton() {
+/** 简洁加载态 */
+function LoadingSkeleton() {
   return (
     <div className="card">
       <div className="card-head"><FundOutlined style={{ color: 'var(--accent)' }} /> 基本面数据</div>
       <div className="card-body">
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-          <div className="shimmer-skeleton" style={{ flex: 1, height: '4.5rem' }} />
-          <div className="shimmer-skeleton" style={{ flex: 1, height: '4.5rem' }} />
-          <div className="shimmer-skeleton" style={{ flex: 1, height: '4.5rem' }} />
-        </div>
-        <div className="shimmer-skeleton" style={{ height: '6rem', marginBottom: '1rem' }} />
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="shimmer-skeleton" style={{ flex: '1 1 30%', height: '3.5rem', minWidth: '6rem' }} />
-          ))}
-        </div>
+        <div className="empty">加载中...</div>
       </div>
     </div>
   );
@@ -72,7 +62,7 @@ const FundamentalCard = React.memo(function FundamentalCard({ data, loading }: F
   }, [trend]);
 
   if (loading && !data) {
-    return <ShimmerSkeleton />;
+    return <LoadingSkeleton />;
   }
 
   if (!metrics && !trend.length) {
@@ -130,14 +120,14 @@ const FundamentalCard = React.memo(function FundamentalCard({ data, loading }: F
               </span>
             </div>
             <div className="profit-trend-chart">
-              {trend.slice(0, 6).reverse().map((item, i) => {
+              {trend.slice(0, 6).reverse().map((item) => {
                 const dateLabel = item.report_date.length >= 10 ? item.report_date.slice(5, 10) : item.report_date;
                 return (
                   <div key={item.report_date} className="profit-trend-row">
                     <span className="profit-trend-date">{dateLabel}</span>
                     <div className="profit-trend-bars">
-                      <MiniBar value={item.revenue} max={maxRevenue} color="var(--accent)" delay={i * 0.1} />
-                      <MiniBar value={item.net_profit} max={maxProfit} color={item.net_profit >= 0 ? UP : DOWN} delay={i * 0.1 + 0.05} />
+                      <MiniBar value={item.revenue} max={maxRevenue} color="var(--accent)" />
+                      <MiniBar value={item.net_profit} max={maxProfit} color={item.net_profit >= 0 ? UP : DOWN} />
                     </div>
                     <span className="profit-trend-val">{fmtMoney(item.net_profit)}</span>
                   </div>
