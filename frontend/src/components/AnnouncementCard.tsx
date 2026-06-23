@@ -68,7 +68,7 @@ const AnnouncementCard = React.memo(function AnnouncementCard({ data, loading }:
                       background: color,
                       display: 'inline-block',
                       flexShrink: 0,
-                    }} />
+                    }} className="cat-dot" />
                     {catLabel(item.category)}
                   </span>
                   <span className="list-date">
