@@ -36,8 +36,8 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'SF Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
 }
 
 [data-theme="dark"] {
@@ -58,8 +58,24 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { font-size: 16px; }
-body { font-family: var(--font-sans); background: var(--bg-page); color: var(--text-primary); min-height: 100vh; transition: background 0.3s var(--ease), color 0.3s var(--ease); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; line-height: 1.5; }
+body { font-family: var(--font-sans); background: var(--bg-page); color: var(--text-primary); min-height: 100vh; transition: background 0.3s var(--ease), color 0.3s var(--ease); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; line-height: 1.6; }
 #root { min-height: 100vh; }
+
+/* 中文排版优化 */
+h1, h2, h3, h4, h5, h6, .stock-name, .commodity-title, .nav-title, .hero-heading, .hero-sub, .section-label {
+  font-weight: 500;  /* 中文用500代替英文的600，视觉重量更平衡 */
+  letter-spacing: 0.02em;  /* 中文需要少量字距 */
+  line-height: 1.4;  /* 中文行高比英文略紧凑 */
+}
+.stock-name { font-weight: 600; letter-spacing: 0; }
+.nav-title { font-weight: 600; letter-spacing: 0; }
+.hero-heading { font-weight: 700; letter-spacing: -0.02em; }
+.hero-sub { font-weight: 400; letter-spacing: 0.04em; }
+.section-label { font-weight: 500; letter-spacing: 0.08em; }
+.card-head { font-weight: 500; letter-spacing: 0.02em; }
+.data-label { font-weight: 500; letter-spacing: 0.06em; }
+.metric-label { font-weight: 500; letter-spacing: 0.04em; }
+.btn { font-weight: 500; letter-spacing: 0.02em; }
 
 .layout { min-height: 100vh; background: var(--bg-page); }
 .content { min-height: calc(100vh - 3.5rem); }
