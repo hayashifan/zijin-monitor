@@ -26,15 +26,15 @@ def svc():
 def mock_financial_df():
     """模拟 stock_financial_abstract_ths 返回的 DataFrame"""
     return pd.DataFrame({
-        '报告期': ['2025-12-31', '2025-09-30', '2025-06-30', '2025-03-31'],
-        '报告类型': ['年报', '三季报', '半年报', '一季报'],
-        '营业总收入': [293050000000, 218000000000, 145000000000, 72000000000],
-        '净利润': [32000000000, 24000000000, 16000000000, 8000000000],
-        '毛利率': [15.5, 15.2, 14.8, 14.5],
-        '净利率': [10.9, 11.0, 11.0, 11.1],
-        '净资产收益率': [21.3, 15.8, 10.5, 5.3],
-        '基本每股收益': [1.21, 0.91, 0.61, 0.30],
-        '每股净资产': [5.68, 5.75, 5.80, 5.70],
+        '报告期': ['2025-03-31', '2025-06-30', '2025-09-30', '2025-12-31'],
+        '报告类型': ['一季报', '半年报', '三季报', '年报'],
+        '营业总收入': [72000000000, 145000000000, 218000000000, 293050000000],
+        '净利润': [8000000000, 16000000000, 24000000000, 32000000000],
+        '销售毛利率': [14.5, 14.8, 15.2, 15.5],
+        '销售净利率': [11.1, 11.0, 11.0, 10.9],
+        '净资产收益率': [5.3, 10.5, 15.8, 21.3],
+        '基本每股收益': [0.30, 0.61, 0.91, 1.21],
+        '每股净资产': [5.70, 5.80, 5.75, 5.68],
     })
 
 
@@ -140,8 +140,8 @@ class TestGetOverviewHandlesPartialFailure:
 
     def test_metrics_fails_others_succeed(self, svc, mock_financial_df, mock_profit_df):
         """get_key_metrics 抛异常，但 financial_summary 和 profit_trend 正常"""
-        with patch('services.fundamental_service.ak') as mock_ak:
-            # get_key_metrics → ak.stock_zh_a_spot_em 抛异常
+        with patch('services.fundamental_service.ak') as mock_ak, \
+             patch.object(FundamentalService, '_fetch_sina_price', return_value=None):
             mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("API down"))
             mock_ak.stock_financial_abstract_ths = MagicMock(return_value=mock_financial_df)
             mock_ak.stock_profit_sheet_by_report_em = MagicMock(return_value=mock_profit_df)
@@ -149,8 +149,12 @@ class TestGetOverviewHandlesPartialFailure:
             result = _run(svc.get_overview('601899'))
 
         assert result is not None
-        # metrics 应为 None（因 get_key_metrics 失败后 enhanced_metrics 为空 dict → falsy）
-        assert result['metrics'] is None or result['metrics'] == {}
+        # metrics 由 financial data 派生（ROE/EPS/BVPS/毛利率/净利率），PE/PB=0
+        m = result['metrics']
+        assert m is not None
+        assert m['pe_ratio'] == 0
+        assert m['roe'] == 21.3
+        assert m['eps'] == 1.21
         # financial_summary 和 profit_trend 仍然可用
         assert len(result['financial_summary']) == 4
         assert len(result['profit_trend']) == 6
@@ -249,20 +253,16 @@ class TestDiskCacheFallback:
 
     def test_uses_disk_cache_when_api_fails(self, svc, mock_spot_df):
         with patch('services.fundamental_service.ak') as mock_ak:
-            # 第一次成功，写入磁盘缓存
             mock_ak.stock_zh_a_spot_em = MagicMock(return_value=mock_spot_df)
             first_result = _run(svc.get_key_metrics('601899'))
 
-        # 清除内存缓存以模拟重启
         svc._memory_cache.clear()
 
-        with patch('services.fundamental_service.ak') as mock_ak:
-            # 第二次 API 失败
+        with patch('services.fundamental_service.ak') as mock_ak, \
+             patch.object(FundamentalService, '_fetch_sina_price', return_value=None):
             mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("API down"))
-
             second_result = _run(svc.get_key_metrics('601899'))
 
-        # 应该从磁盘缓存获得数据
         assert second_result is not None
         assert second_result['pe_ratio'] == 8.5
         assert second_result['from_cache'] is True
@@ -273,12 +273,13 @@ class TestDiskCacheFallback:
 class TestGetOverviewAllSourcesFail:
     """test_get_overview_all_sources_fail: 全部 akshare 调用抛异常，
     验证返回空/None 且不抛异常。"""
-
     def test_all_fail_returns_empty(self, svc):
-        with patch('services.fundamental_service.ak') as mock_ak:
-            mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("down"))
-            mock_ak.stock_financial_abstract_ths = MagicMock(side_effect=Exception("down"))
-            mock_ak.stock_profit_sheet_by_report_em = MagicMock(side_effect=Exception("down"))
+        """全部 3 个数据源失败，应返回非 None 的空 overview"""
+        with patch('services.fundamental_service.ak') as mock_ak, \
+             patch.object(FundamentalService, '_fetch_sina_price', return_value=None):
+            mock_ak.stock_financial_abstract_ths = MagicMock(side_effect=Exception("fail1"))
+            mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("fail2"))
+            mock_ak.stock_profit_sheet_by_report_em = MagicMock(side_effect=Exception("fail3"))
 
             result = _run(svc.get_overview('601899'))
 
@@ -385,32 +386,32 @@ class TestOverviewFromCacheFlag:
     """测试 overview 的 from_cache 标志逻辑"""
 
     def test_from_cache_false_when_fresh(self, svc, mock_financial_df, mock_spot_df, mock_profit_df):
+        """新鲜数据 from_cache=False"""
         with patch('services.fundamental_service.ak') as mock_ak:
             mock_ak.stock_financial_abstract_ths = MagicMock(return_value=mock_financial_df)
             mock_ak.stock_zh_a_spot_em = MagicMock(return_value=mock_spot_df)
             mock_ak.stock_profit_sheet_by_report_em = MagicMock(return_value=mock_profit_df)
-
             result = _run(svc.get_overview('601899'))
 
         assert result['from_cache'] is False
 
-    def test_from_cache_true_when_disk_fallback(self, svc, mock_spot_df):
-        # 先让 metrics 写入磁盘缓存
+    def test_from_cache_true_when_disk_fallback(self, svc, mock_financial_df, mock_spot_df, mock_profit_df):
+        """磁盘缓存命中时 from_cache=True"""
         with patch('services.fundamental_service.ak') as mock_ak:
+            mock_ak.stock_financial_abstract_ths = MagicMock(return_value=mock_financial_df)
             mock_ak.stock_zh_a_spot_em = MagicMock(return_value=mock_spot_df)
-            _run(svc.get_key_metrics('601899'))
+            mock_ak.stock_profit_sheet_by_report_em = MagicMock(return_value=mock_profit_df)
+            _run(svc.get_overview('601899'))
 
         svc._memory_cache.clear()
 
-        with patch('services.fundamental_service.ak') as mock_ak:
-            # metrics 走磁盘缓存，summary 和 profit 也失败
-            mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("down"))
+        with patch('services.fundamental_service.ak') as mock_ak, \
+             patch.object(FundamentalService, '_fetch_sina_price', return_value=None):
             mock_ak.stock_financial_abstract_ths = MagicMock(side_effect=Exception("down"))
+            mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("down"))
             mock_ak.stock_profit_sheet_by_report_em = MagicMock(side_effect=Exception("down"))
-
             result = _run(svc.get_overview('601899'))
 
-        # metrics 从磁盘恢复，from_cache 应为 True
         assert result['from_cache'] is True
 
 

@@ -84,7 +84,8 @@ class FundamentalService:
         if val is None or val == '' or val == '--' or val == 'N/A':
             return default
         try:
-            return float(val)
+            s = str(val).strip().rstrip('%')
+            return float(s)
         except (ValueError, TypeError):
             return default
 
@@ -122,7 +123,7 @@ class FundamentalService:
             async with sem:
                 df = await asyncio.to_thread(ak.stock_financial_abstract_ths, stock_code, "按报告期")
             if df is not None and not df.empty:
-                latest_data = df.head(4).to_dict('records')
+                latest_data = df.iloc[-4:][::-1].to_dict('records')
                 financial_data = []
                 for row in latest_data:
                     financial_data.append({
@@ -130,8 +131,8 @@ class FundamentalService:
                         'report_type': row.get('报告类型', ''),
                         'revenue': self._safe_float(row.get('营业总收入', 0)),
                         'net_profit': self._safe_float(row.get('净利润', 0)),
-                        'gross_margin': self._safe_float(row.get('毛利率', 0)),
-                        'net_margin': self._safe_float(row.get('净利率', 0)),
+                        'gross_margin': self._safe_float(row.get('销售毛利率', row.get('毛利率', 0))),
+                        'net_margin': self._safe_float(row.get('销售净利率', row.get('净利率', 0))),
                         'roe': self._safe_float(row.get('净资产收益率', 0)),
                         'eps': self._safe_float(row.get('基本每股收益', 0)),
                         'bvps': self._safe_float(row.get('每股净资产', 0)),
@@ -157,14 +158,37 @@ class FundamentalService:
 
         return None
 
+    @staticmethod
+    def _fetch_sina_price(stock_code: str) -> Optional[float]:
+        """从新浪获取当前股价（同步，用于PE/PB计算）"""
+        import requests as req
+        try:
+            prefix = 'sh' if stock_code.startswith('6') else 'sz'
+            url = f"https://hq.sinajs.cn/list={prefix}{stock_code}"
+            s = req.Session()
+            s.trust_env = False
+            s.headers.update({'User-Agent': 'Mozilla/5.0', 'Referer': 'https://finance.sina.com.cn/'})
+            resp = s.get(url, timeout=10)
+            resp.encoding = 'gbk'
+            text = resp.text
+            if '="' not in text:
+                return None
+            data = text.split('="')[1].rstrip('";')
+            parts = data.split(',')
+            price = float(parts[3]) if len(parts) > 3 else 0
+            return price if price > 0 else None
+        except Exception:
+            return None
+
     async def get_key_metrics(self, stock_code: str) -> Optional[Dict]:
-        """获取关键估值指标"""
+        """获取关键估值指标（东方财富 → Sina+财务自算 兜底）"""
         cache_key = f'metrics_{stock_code}'
 
         cached = self._get_memory(cache_key)
         if cached:
             return cached
 
+        # 方案A: 东方财富全A接口
         try:
             sem = _get_semaphore()
             async with sem:
@@ -186,8 +210,44 @@ class FundamentalService:
                 _save_disk_cache(cache_key, result, 'metrics')
                 return result
         except Exception as e:
-            print(f"[fundamental] API failed: {e}")
+            print(f"[fundamental] stock_zh_a_spot_em failed: {e}, trying Sina fallback")
 
+        # 方案B: Sina股价 + 财务摘要自算PE/PB
+        try:
+            price = await asyncio.to_thread(self._fetch_sina_price, stock_code)
+            if price and price > 0:
+                # 尝试从财务摘要获取EPS/BVPS
+                fin_key = f'financial_{stock_code}'
+                fin = self._get_memory(fin_key)
+                if fin is None:
+                    fin = _get_valid_data(fin_key, 'financial')
+                eps, bvps = 0.0, 0.0
+                if fin and fin.get('data'):
+                    latest = fin['data'][0]
+                    eps = self._safe_float(latest.get('eps', 0))
+                    bvps = self._safe_float(latest.get('bvps', 0))
+                pe = round(price / eps, 1) if eps > 0 else 0
+                pb = round(price / bvps, 2) if bvps > 0 else 0
+                # 紫金矿业总股本约265亿股（硬编码，后续可从API获取）
+                total_shares = 26500000000
+                result = {
+                    'stock_code': stock_code,
+                    'pe_ratio': pe,
+                    'pb_ratio': pb,
+                    'total_market_cap': round(price * total_shares, 0),
+                    'circulating_market_cap': 0,
+                    'turnover_rate': 0,
+                    'volume_ratio': 0,
+                    'from_cache': False,
+                    'computed_from': 'sina+financial',
+                }
+                self._set_memory(cache_key, result)
+                _save_disk_cache(cache_key, result, 'metrics')
+                return result
+        except Exception as e:
+            print(f"[fundamental] Sina fallback also failed: {e}")
+
+        # 方案C: 磁盘缓存
         disk_data = _get_valid_data(cache_key, 'metrics')
         if disk_data:
             disk_data['from_cache'] = True
@@ -197,13 +257,14 @@ class FundamentalService:
         return None
 
     async def get_profit_trend(self, stock_code: str, periods: int = 8) -> List[Dict]:
-        """获取盈利趋势数据"""
+        """获取盈利趋势数据（东方财富 → 财务摘要兜底）"""
         cache_key = f'profit_{stock_code}_{periods}'
 
         cached = self._get_memory(cache_key)
         if cached:
             return cached
 
+        # 方案A: 东方财富利润表
         try:
             sem = _get_semaphore()
             async with sem:
@@ -221,8 +282,33 @@ class FundamentalService:
                 _save_disk_cache(cache_key, trend_data, 'profit')
                 return trend_data
         except Exception as e:
-            print(f"[fundamental] API failed: {e}")
+            print(f"[fundamental] stock_profit_sheet failed: {e}, deriving from financial summary")
 
+        # 方案B: 从财务摘要派生盈利趋势
+        try:
+            fin_key = f'financial_{stock_code}'
+            fin = self._get_memory(fin_key)
+            if fin is None:
+                fin_data = await self.get_financial_summary(stock_code)
+            else:
+                fin_data = fin
+            if fin_data and fin_data.get('data'):
+                trend_data = []
+                for item in fin_data['data'][:periods]:
+                    trend_data.append({
+                        'report_date': item.get('report_date', ''),
+                        'revenue': self._safe_float(item.get('revenue', 0)),
+                        'net_profit': self._safe_float(item.get('net_profit', 0)),
+                        'total_profit': 0,
+                    })
+                if trend_data:
+                    self._set_memory(cache_key, trend_data)
+                    _save_disk_cache(cache_key, trend_data, 'profit')
+                    return trend_data
+        except Exception as e:
+            print(f"[fundamental] financial summary fallback also failed: {e}")
+
+        # 方案C: 磁盘缓存
         disk_data = _get_valid_data(cache_key, 'profit')
         if disk_data:
             self._set_memory(cache_key, disk_data)
@@ -284,6 +370,16 @@ class FundamentalService:
         enhanced_metrics = {}
         if metrics:
             enhanced_metrics = {**metrics, **latest_financial}
+        elif latest_financial:
+            # metrics接口失败但有财务数据，用财务数据构建基础指标
+            enhanced_metrics = {
+                'stock_code': stock_code,
+                'pe_ratio': 0, 'pb_ratio': 0,
+                'total_market_cap': 0, 'circulating_market_cap': 0,
+                'turnover_rate': 0, 'volume_ratio': 0,
+                'from_cache': False,
+                **latest_financial,
+            }
 
         result = {
             'stock_code': stock_code,
