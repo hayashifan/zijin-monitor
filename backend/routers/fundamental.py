@@ -7,6 +7,21 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+@router.get("/overview")
+async def get_fundamental_overview(code: str = "601899"):
+    """获取基本面概览（指标+财务摘要+盈利趋势）"""
+    try:
+        overview = await fundamental_service.get_overview(code)
+        if overview:
+            return {"success": True, "data": overview}
+        return {"success": False, "message": "Fundamental data unavailable"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to get fundamental overview")
+        raise HTTPException(status_code=500, detail="服务内部错误")
+
+
 @router.get("/summary")
 async def get_financial_summary(code: str = "601899"):
     try:

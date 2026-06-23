@@ -54,6 +54,29 @@ export interface KeyMetrics {
   total_market_cap: number;
   circulating_market_cap: number;
   turnover_rate: number;
+  volume_ratio?: number;
+  roe?: number;
+  eps?: number;
+  bvps?: number;
+  gross_margin?: number;
+  net_margin?: number;
+  report_date?: string;
+}
+
+export interface ProfitTrendItem {
+  report_date: string;
+  revenue: number;
+  net_profit: number;
+  gross_profit: number;
+}
+
+export interface FinancialOverview {
+  stock_code: string;
+  company_name: string;
+  metrics: KeyMetrics | null;
+  financial_summary: FinancialData[];
+  profit_trend: ProfitTrendItem[];
+  from_cache: boolean;
 }
 
 export interface StockOverview {

@@ -5,7 +5,7 @@ import {
   FundOutlined,
 } from '@ant-design/icons';
 import { stockAPI, commodityAPI, announcementAPI, fundamentalAPI, quantAPI } from './services/api';
-import { StockQuote, CommodityPrice, Announcement, KeyMetrics, QuantReport } from './types';
+import { StockQuote, CommodityPrice, Announcement, FinancialOverview, QuantReport } from './types';
 import { fmtTime } from './components/constants';
 import KlineChart, { KlineItem } from './components/KlineChart';
 import StockCard from './components/StockCard';
@@ -31,7 +31,7 @@ function App() {
   const [copperLME, setCopperLME] = useState<CommodityPrice|null>(null);
   const [copperSHFE, setCopperSHFE] = useState<CommodityPrice|null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [metrics, setMetrics] = useState<KeyMetrics|null>(null);
+  const [metrics, setMetrics] = useState<FinancialOverview|null>(null);
   const [quantReport, setQuantReport] = useState<QuantReport|null>(null);
   const [klineData, setKlineData] = useState<KlineItem[]>([]);
   const [klinePeriod, setKlinePeriod] = useState<number>(30);
@@ -56,7 +56,7 @@ function App() {
     try {
       const [s, c, a, m, k, q] = await Promise.allSettled([
         stockAPI.getOverview(), commodityAPI.getOverview(),
-        announcementAPI.getList('601899','cninfo',1,10), fundamentalAPI.getMetrics('601899'),
+        announcementAPI.getList('601899','cninfo',1,10), fundamentalAPI.getOverview('601899'),
         stockAPI.getHistory('601899','A',klinePeriod),
         quantAPI.getLatest(),
       ]);
@@ -198,7 +198,7 @@ function App() {
           <div className="section-label">公司信息</div>
           <Row gutter={[16,16]}>
             <Col xs={24} lg={12}><AnnouncementCard data={announcements} loading={loading} /></Col>
-            <Col xs={24} lg={12}><FundamentalCard metrics={metrics} loading={loading} /></Col>
+            <Col xs={24} lg={12}><FundamentalCard data={metrics} loading={loading} /></Col>
           </Row>
         </div>
       </main>

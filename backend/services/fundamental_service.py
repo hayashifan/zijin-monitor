@@ -205,4 +205,67 @@ class FundamentalService:
         return []
 
 
+    async def get_overview(self, stock_code: str) -> Optional[Dict]:
+        """获取基本面概览（组合指标+财务摘要+盈利趋势）"""
+        cache_key = f'overview_{stock_code}'
+
+        cached = self._get_memory(cache_key)
+        if cached:
+            return cached
+
+        # 并发获取三个数据源
+        metrics_task = self.get_key_metrics(stock_code)
+        summary_task = self.get_financial_summary(stock_code)
+        profit_task = self.get_profit_trend(stock_code, 6)
+
+        metrics, summary, profit_trend = await asyncio.gather(
+            metrics_task, summary_task, profit_task,
+            return_exceptions=True
+        )
+
+        # 处理异常
+        if isinstance(metrics, Exception):
+            print(f"[fundamental] metrics error: {metrics}")
+            metrics = None
+        if isinstance(summary, Exception):
+            print(f"[fundamental] summary error: {summary}")
+            summary = None
+        if isinstance(profit_trend, Exception):
+            print(f"[fundamental] profit error: {profit_trend}")
+            profit_trend = []
+
+        # 从财务摘要提取最新数据补充到指标
+        latest_financial = {}
+        if summary and summary.get('data'):
+            latest = summary['data'][0] if summary['data'] else {}
+            latest_financial = {
+                'roe': latest.get('roe', 0),
+                'eps': latest.get('eps', 0),
+                'bvps': latest.get('bvps', 0),
+                'gross_margin': latest.get('gross_margin', 0),
+                'net_margin': latest.get('net_margin', 0),
+                'report_date': latest.get('report_date', ''),
+            }
+
+        # 合并指标
+        enhanced_metrics = {}
+        if metrics:
+            enhanced_metrics = {**metrics, **latest_financial}
+
+        result = {
+            'stock_code': stock_code,
+            'company_name': '紫金矿业集团股份有限公司',
+            'metrics': enhanced_metrics or None,
+            'financial_summary': summary.get('data', []) if summary else [],
+            'profit_trend': profit_trend if isinstance(profit_trend, list) else [],
+            'from_cache': bool(
+                (metrics and metrics.get('from_cache')) or
+                (summary and summary.get('from_cache'))
+            ),
+        }
+
+        self._set_memory(cache_key, result)
+        return result
+
+
 fundamental_service = FundamentalService()

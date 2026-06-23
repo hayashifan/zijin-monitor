@@ -33,12 +33,15 @@ export const announcementAPI = {
 
 // Fundamental API
 export const fundamentalAPI = {
+  getOverview: (code: string = '601899') =>
+    api.get('/api/fundamental/overview', { params: { code } }),
+
   getSummary: (code: string = '601899') =>
     api.get('/api/fundamental/summary', { params: { code } }),
-  
+
   getMetrics: (code: string = '601899') =>
     api.get('/api/fundamental/metrics', { params: { code } }),
-  
+
   getProfitTrend: (code: string = '601899', periods: number = 8) =>
     api.get('/api/fundamental/profit-trend', { params: { code, periods } }),
 };

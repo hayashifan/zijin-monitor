@@ -183,3 +183,23 @@ body { font-family: var(--font-sans); background: var(--bg-page); color: var(--t
 
 .kline-card { overflow: visible; }
 .kline-card .card-body { overflow: visible; }
+
+/* 盈利趋势 */
+.profit-trend-section { margin-bottom: 0.5rem; }
+.profit-trend-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.profit-trend-title { font-size: 0.6875rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.02em; }
+.profit-trend-legend { display: flex; gap: 0.75rem; }
+.profit-legend-item { display: flex; align-items: center; gap: 0.25rem; font-size: 0.625rem; color: var(--text-tertiary); }
+.profit-legend-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex-shrink: 0; }
+
+.profit-trend-chart { display: flex; flex-direction: column; gap: 0.375rem; }
+.profit-trend-row { display: flex; align-items: center; gap: 0.5rem; }
+.profit-trend-date { font-size: 0.625rem; color: var(--text-tertiary); font-family: var(--font-mono); width: 2.5rem; flex-shrink: 0; text-align: right; }
+.profit-trend-bars { flex: 1; display: flex; flex-direction: column; gap: 0.1875rem; }
+.profit-trend-val { font-size: 0.625rem; color: var(--text-secondary); font-family: var(--font-mono); width: 3rem; flex-shrink: 0; text-align: right; }
+
+.profit-bar-track { height: 0.375rem; background: var(--border-light); border-radius: 0.1875rem; overflow: hidden; }
+.profit-bar-fill { height: 100%; border-radius: 0.1875rem; transition: width 0.4s ease; min-width: 0.125rem; }
+
+.cache-badge { font-size: 0.5625rem; font-weight: 600; padding: 0.0625rem 0.375rem; border-radius: 0.25rem; background: var(--accent-bg); color: var(--accent); margin-left: auto; }
+.report-date-label { margin-top: 0.75rem; font-size: 0.625rem; color: var(--text-tertiary); text-align: right; }
