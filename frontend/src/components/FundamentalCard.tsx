@@ -16,12 +16,42 @@ const fmtMoney = (v: number) => !v ? '--' : v >= 1e8 ? `${(v / 1e8).toFixed(1)}�
 /** PE 颜色：低估值绿，高估值红 */
 const peColor = (pe: number) => pe <= 0 ? NEUTRAL : pe < 15 ? UP : pe < 30 ? '#DAA520' : DOWN;
 
+/** ROE 颜色 */
+const roeColor = (roe: number | undefined) => {
+  if (!roe || roe <= 0) return NEUTRAL;
+  if (roe > 15) return UP;
+  if (roe >= 10) return '#DAA520';
+  return NEUTRAL;
+};
+
 /** 条形图组件 */
-function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
+function MiniBar({ value, max, color, delay }: { value: number; max: number; color: string; delay: number }) {
   const pct = max > 0 ? Math.min(Math.abs(value) / max * 100, 100) : 0;
   return (
     <div className="profit-bar-track">
-      <div className="profit-bar-fill" style={{ width: `${pct}%`, background: color }} />
+      <div className="profit-bar-fill" style={{ width: `${pct}%`, background: color, animationDelay: `${delay}s` }} />
+    </div>
+  );
+}
+
+/** 骨架屏 */
+function ShimmerSkeleton() {
+  return (
+    <div className="card">
+      <div className="card-head"><FundOutlined style={{ color: 'var(--accent)' }} /> 基本面数据</div>
+      <div className="card-body">
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          <div className="shimmer-skeleton" style={{ flex: 1, height: '4.5rem' }} />
+          <div className="shimmer-skeleton" style={{ flex: 1, height: '4.5rem' }} />
+          <div className="shimmer-skeleton" style={{ flex: 1, height: '4.5rem' }} />
+        </div>
+        <div className="shimmer-skeleton" style={{ height: '6rem', marginBottom: '1rem' }} />
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="shimmer-skeleton" style={{ flex: '1 1 30%', height: '3.5rem', minWidth: '6rem' }} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -42,12 +72,7 @@ const FundamentalCard = React.memo(function FundamentalCard({ data, loading }: F
   }, [trend]);
 
   if (loading && !data) {
-    return (
-      <div className="card">
-        <div className="card-head"><FundOutlined style={{ color: 'var(--accent)' }} /> 基本面数据</div>
-        <div className="card-body"><div className="empty">加载中...</div></div>
-      </div>
-    );
+    return <ShimmerSkeleton />;
   }
 
   if (!metrics && !trend.length) {
@@ -87,7 +112,7 @@ const FundamentalCard = React.memo(function FundamentalCard({ data, loading }: F
           <Col span={8}>
             <div className="metric-card">
               <div className="metric-label">ROE</div>
-              <div className="metric-value" style={{ color: metrics && metrics.roe && metrics.roe > 15 ? UP : metrics && metrics.roe && metrics.roe > 0 ? '#DAA520' : NEUTRAL }}>
+              <div className="metric-value" style={{ color: roeColor(metrics?.roe) }}>
                 {metrics && metrics.roe ? `${metrics.roe.toFixed(1)}%` : '--'}
               </div>
             </div>
@@ -111,8 +136,8 @@ const FundamentalCard = React.memo(function FundamentalCard({ data, loading }: F
                   <div key={item.report_date} className="profit-trend-row">
                     <span className="profit-trend-date">{dateLabel}</span>
                     <div className="profit-trend-bars">
-                      <MiniBar value={item.revenue} max={maxRevenue} color="var(--accent)" />
-                      <MiniBar value={item.net_profit} max={maxProfit} color={item.net_profit >= 0 ? UP : DOWN} />
+                      <MiniBar value={item.revenue} max={maxRevenue} color="var(--accent)" delay={i * 0.1} />
+                      <MiniBar value={item.net_profit} max={maxProfit} color={item.net_profit >= 0 ? UP : DOWN} delay={i * 0.1 + 0.05} />
                     </div>
                     <span className="profit-trend-val">{fmtMoney(item.net_profit)}</span>
                   </div>

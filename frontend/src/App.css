@@ -169,7 +169,121 @@ body { font-family: var(--font-sans); background: var(--bg-page); color: var(--t
 
 /* 动画 */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(0.75rem); } to { opacity: 1; transform: translateY(0); } }
-.card { animation: fadeUp 0.4s ease-out forwards; }
+.card { animation: cardEnter 0.4s ease-out forwards; }
+
+/* Staggered card entrance */
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Pulse glow for values */
+@keyframes valueGlow {
+  0%, 100% { box-shadow: 0 0 0 transparent; }
+  50% { box-shadow: 0 0 12px rgba(218, 165, 32, 0.3); }
+}
+
+/* Bar grow animation */
+@keyframes barGrow {
+  from { width: 0; }
+}
+
+/* Commodity price pulse glow */
+@keyframes commodityPricePulse {
+  0% { opacity: 0.6; text-shadow: 0 0 8px currentColor; }
+  100% { opacity: 1; text-shadow: 0 0 0 transparent; }
+}
+.commodity-value.commodity-flash {
+  animation: commodityPricePulse 0.6s ease-out;
+}
+
+/* Announcement slide-in on hover */
+.list-item { transform: translateX(0); }
+.list-item:hover .list-title { transform: translateX(2px); }
+.list-title { transition: transform 0.2s ease; }
+.list-item .link-icon { transition: transform 0.2s ease, color 0.2s ease; }
+.list-item:hover .link-icon { transform: translateX(3px); color: var(--accent); }
+
+/* FundamentalCard shimmer skeleton */
+.shimmer-skeleton {
+  background: linear-gradient(90deg, var(--border-light) 25%, var(--bg-card-hover) 50%, var(--border-light) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Profit bar grow animation */
+.profit-bar-fill { animation: barGrow 0.5s ease-out forwards; }
+
+/* Confidence meter */
+.confidence-meter-track {
+  height: 4px;
+  background: var(--border-light);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.confidence-meter-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+  animation: barGrow 0.6s ease-out forwards;
+}
+
+/* Gradient border for QuantCard */
+.card--quant-passed {
+  border-image: linear-gradient(135deg, #52c41a, #73d13d) 1;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+.card--quant-passed::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-md);
+  padding: 1px;
+  background: linear-gradient(135deg, #52c41a80, #73d13d80);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.card--quant-failed::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-md);
+  padding: 1px;
+  background: linear-gradient(135deg, #DAA52080, #f9731680);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Sharpe glow */
+.sharpe-glow {
+  animation: valueGlow 2s ease-in-out infinite;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+/* Section label accent */
+.section-label {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.section-label::after { content: ''; flex: 1; height: 0.0625rem; background: var(--border-light); margin-left: 0.75rem; }
 
 @media (max-width: 48rem) { .container { padding: var(--space-md); } .hero { padding: 2rem 1.5rem; } .hero-heading { font-size: 1.5rem; } .price-value { font-size: 1.75rem; } .data-grid { grid-template-columns: repeat(2, 1fr); } .commodity-value { font-size: 1.25rem; } .nav { padding: 0 var(--space-md); } }
 @media (max-width: 36rem) { .hero-actions { flex-direction: column; } .btn { width: 100%; justify-content: center; } }
@@ -177,7 +291,13 @@ body { font-family: var(--font-sans); background: var(--bg-page); color: var(--t
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 0.1875rem; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-medium); }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 
 .market-badge { display: inline-flex; align-items: center; justify-content: center; padding: 1px 6px; border-radius: 4px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em; background: var(--accent); color: #fff; line-height: 1.4; flex-shrink: 0; }
 
