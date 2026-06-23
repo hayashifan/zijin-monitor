@@ -594,13 +594,44 @@ h1, h2, h3, h4, h5, h6, .stock-name, .commodity-title, .nav-title, .hero-heading
 .profit-legend-item { display: flex; align-items: center; gap: 0.25rem; font-size: 0.625rem; color: var(--text-tertiary); }
 .profit-legend-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex-shrink: 0; }
 
-.profit-trend-chart { display: flex; flex-direction: column; gap: 0.375rem; }
-.profit-trend-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; border-radius: 0.25rem; transition: background 0.15s var(--ease); }
-.profit-trend-row:hover { background: rgba(218,165,32,0.04); }
-.profit-trend-row:hover .profit-bar-fill { filter: brightness(1.2); transition: filter 0.2s var(--ease); }
-.profit-trend-date { font-size: 0.625rem; color: var(--text-tertiary); font-family: var(--font-mono); width: 2.5rem; flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; }
-.profit-trend-bars { flex: 1; display: flex; flex-direction: column; gap: 0.1875rem; }
-.profit-trend-val { font-size: 0.625rem; color: var(--text-secondary); font-family: var(--font-mono); width: 3rem; flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.profit-trend-chart { display: flex; flex-direction: column; gap: 0.5rem; }
+.profit-trend-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  transition: background 0.15s var(--ease);
+}
+.profit-trend-group:hover { background: rgba(218,165,32,0.04); }
+.profit-trend-group:hover .profit-bar-fill { filter: brightness(1.2); transition: filter 0.2s var(--ease); }
+.profit-trend-date {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  width: 2.5rem;
+  flex-shrink: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-top: 0.125rem;
+}
+.profit-trend-tracks { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+.profit-trend-track-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.profit-trend-track-row .profit-bar-track { flex: 1; }
+.profit-bar-val {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  width: 3rem;
+  flex-shrink: 0;
+  text-align: right;
+  white-space: nowrap;
+}
 
 .profit-bar-track { height: 0.375rem; background: var(--border-light); border-radius: 0.1875rem; overflow: hidden; }
 .profit-bar-fill { height: 100%; border-radius: 0.1875rem; min-width: 0.125rem; transition: width 0.3s var(--ease); }
