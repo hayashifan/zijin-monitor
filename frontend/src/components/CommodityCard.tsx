@@ -33,12 +33,10 @@ const CommodityCard = React.memo(function CommodityCard({ data, type, loading }:
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.375rem' }}>
           <span className="commodity-delta" style={{color:dColor}}>{arrow} {zero?'0.00%':`${up?'+':''}${data.change_percent.toFixed(2)}%`}</span>
           <span style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 2,
             fontSize: '0.625rem',
             fontWeight: 500,
             color: 'var(--text-tertiary)',
+            fontFamily: 'var(--font-mono)',
           }}>
             {isUSD ? 'USD' : '¥CNY'}
           </span>

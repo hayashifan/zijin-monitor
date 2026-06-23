@@ -175,7 +175,7 @@ function App() {
             K线走势
             <div style={{display:'flex',gap:'0.25rem'}}>
               {[30,60,90].map(d => (
-                <button key={d} className={`btn ${klinePeriod===d?'btn-primary':'btn-ghost'}`}
+                <button key={d} className={`btn ${klinePeriod===d?'btn-outline active':'btn-outline'}`}
                   style={{padding:'2px 10px',fontSize:'0.75rem'}}
                   onClick={() => setKlinePeriod(d)}>{d}日</button>
               ))}

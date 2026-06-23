@@ -16,7 +16,6 @@ const catLabel = (c: string) => c || '公告';
 function relativeTime(dateStr: string): string {
   if (!dateStr) return '';
   const now = Date.now();
-  // Try to parse the date
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   const diff = now - d.getTime();
@@ -54,14 +53,31 @@ const AnnouncementCard = React.memo(function AnnouncementCard({ data, loading }:
               <div className="list-content">
                 <div className="list-title">{item.title}</div>
                 <div className="list-meta">
-                  <span className="list-tag" style={{background:`${color}0a`,color:`${color}cc`}}>{catLabel(item.category)}</span>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.625rem',
+                    fontWeight: 600,
+                    color: `${color}cc`,
+                  }}>
+                    <span style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      background: color,
+                      display: 'inline-block',
+                      flexShrink: 0,
+                    }} />
+                    {catLabel(item.category)}
+                  </span>
                   <span className="list-date">
                     <CalendarOutlined style={{marginRight:4}}/>
                     {relTime || item.publish_date}
                   </span>
                 </div>
               </div>
-              <LinkOutlined className="link-icon" style={{color:'var(--text-tertiary)',fontSize:'0.75rem',flexShrink:0}}/>
+              <LinkOutlined style={{color:'var(--text-tertiary)',fontSize:'0.75rem',flexShrink:0,opacity:0.5}}/>
             </a>
           );
         })}

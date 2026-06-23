@@ -28,7 +28,7 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
   const totalChecks = Object.values(checks).length;
   const allPassed = passedCount === totalChecks;
 
-  // 信号判定：综合夏普、AUC、验证通过数
+  // 信号判定
   let signal: string;
   let signalColor: string;
   let signalIcon: string;
@@ -85,48 +85,41 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
       </div>
       <div className="card-body">
         <Row gutter={[12,12]}>
-          {/* ── 操作建议（置顶） ── */}
+          {/* ── 操作建议 ── */}
           <Col span={24}>
-            <div style={{
-              background: `${signalColor}08`,
-              border: `1px solid ${signalColor}20`,
-              borderRadius: 8,
-              padding: '12px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-            }}>
-              <div style={{fontSize: '1.8rem', lineHeight: 1}}>{signalIcon}</div>
+            <div className="quant-signal-box">
+              <div style={{fontSize: '1.8rem', lineHeight: 1, opacity: 0.8}}>{signalIcon}</div>
               <div style={{flex: 1}}>
-                <div style={{fontSize: '1.1rem', fontWeight: 700, color: signalColor}}>
+                <div style={{fontSize: '1.1rem', fontWeight: 700, color: signalColor, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums'}}>
                   信号：{signal}
                 </div>
-                <div style={{fontSize: '0.8rem', opacity: 0.7, marginTop: 2}}>
+                <div style={{fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 2}}>
                   置信度 {confidence} · 建议 {holdText} · {position}
                 </div>
               </div>
               <div style={{
-                background: `${confColor}12`,
                 color: confColor,
                 padding: '4px 10px',
                 borderRadius: 6,
+                border: `1px solid ${confColor}30`,
                 fontSize: '0.75rem',
                 fontWeight: 600,
+                fontFamily: 'var(--font-mono)',
               }}>
                 置信 {confidence}
               </div>
             </div>
-            {/* Confidence meter — simple bar, no animation */}
+            {/* Confidence meter */}
             <div className="confidence-meter-track">
               <div className="confidence-meter-fill" style={{ width: `${confPct}%`, background: confColor }} />
             </div>
           </Col>
 
-          {/* ── 核心指标（4格） ── */}
+          {/* ── 核心指标 ── */}
           <Col span={6}>
             <div className="metric-card metric-card--highlight">
               <div className="metric-label">夏普比率</div>
-              <div className="metric-value metric-value--lg" style={{color: bt.sharpe_ratio > 1.1 ? UP : NEUTRAL}}>
+              <div className="metric-value metric-value--lg" style={{color: bt.sharpe_ratio > 1.5 ? 'var(--accent)' : bt.sharpe_ratio > 1.1 ? UP : NEUTRAL}}>
                 {bt.sharpe_ratio.toFixed(2)}
               </div>
             </div>
@@ -154,26 +147,12 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
             </div>
           </Col>
 
-          {/* ── 验证清单 ── */}
+          {/* ── 验证清单 — clean dots ── */}
           <Col span={24}>
             <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
               {Object.entries(checks).map(([k, v]) => (
-                <span key={k} className="pill" style={{
-                  background: v ? `${UP}10` : `${DOWN}10`,
-                  color: v ? UP : DOWN,
-                  fontSize: '0.7rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}>
-                  <span style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: v ? UP : DOWN,
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }} />
+                <span key={k} className="quant-check-item" style={{color: v ? UP : DOWN}}>
+                  <span className="quant-check-dot" style={{background: v ? UP : DOWN}} />
                   {v ? '✓' : '✗'} {k}
                 </span>
               ))}
@@ -183,24 +162,17 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
           {/* ── 风险提示 ── */}
           {warnings.length > 0 && (
             <Col span={24}>
-              <div style={{
-                background: '#DAA52006',
-                border: '1px solid #DAA52018',
-                borderRadius: 6,
-                padding: '8px 12px',
-                fontSize: '0.75rem',
-                color: '#DAA520',
-              }}>
+              <div className="quant-warning">
                 ⚠ {warnings.join('；')}
               </div>
             </Col>
           )}
 
-          {/* ── 详细数据（折叠） ── */}
+          {/* ── 详细数据 ── */}
           <Col span={24}>
-            <details style={{fontSize: '0.75rem', opacity: 0.6}}>
-              <summary style={{cursor: 'pointer'}}>详细数据</summary>
-              <div style={{marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px'}}>
+            <details className="quant-details" style={{fontSize: '0.75rem', opacity: 0.6}}>
+              <summary>详细数据</summary>
+              <div className="quant-details-grid">
                 <span>模型: {data.model.toUpperCase()}</span>
                 <span>因子: {data.total_factors} 个（{data.valid_factors} 有效）</span>
                 <span>CV 准确率: {fmtPct(cv.mean_accuracy)}</span>

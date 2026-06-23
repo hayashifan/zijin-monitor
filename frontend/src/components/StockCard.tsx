@@ -34,7 +34,7 @@ const StockCard = React.memo(function StockCard({ data, loading, flash, colorCla
             {market==='HK'?'$':'¥'}{data.price.toFixed(2)}
           </div>
           <div className="price-change">
-            <span className="price-badge" style={{background:`${color}18`,color}}>{arrow} {Math.abs(data.change).toFixed(2)}</span>
+            <span className="price-badge" style={{background:`${color}10`,color}}>{arrow} {Math.abs(data.change).toFixed(2)}</span>
             <span className="price-pct" style={{color}}>{zero?'0.00':(up?'+':'')}{data.change_percent.toFixed(2)}%</span>
           </div>
         </div>
