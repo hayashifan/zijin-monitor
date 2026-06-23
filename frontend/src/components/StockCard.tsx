@@ -13,10 +13,11 @@ interface StockCardProps {
 
 const StockCard = React.memo(function StockCard({ data, loading, flash, colorClass, market }: StockCardProps) {
   if (!data) return <div className="card"><div className="empty"><MinusOutlined style={{fontSize:24,opacity:0.3}}/>暂无数据</div></div>;
+  const closed = data.is_closed;
   const up = data.change_percent > 0;
   const zero = data.change_percent === 0;
-  const color = zero ? NEUTRAL : up ? UP : DOWN;
-  const arrow = zero ? <MinusOutlined/> : up ? <ArrowUpOutlined/> : <ArrowDownOutlined/>;
+  const color = closed ? NEUTRAL : zero ? NEUTRAL : up ? UP : DOWN;
+  const arrow = closed || zero ? <MinusOutlined/> : up ? <ArrowUpOutlined/> : <ArrowDownOutlined/>;
   const label = data.market_label || market;
 
   return (
@@ -41,9 +42,9 @@ const StockCard = React.memo(function StockCard({ data, loading, flash, colorCla
         <div className="data-grid">
           {[
             ['今开', data.open.toFixed(2)],
-            ['最高', data.high.toFixed(2), 'data-value--up'],
+            ['最高', data.high.toFixed(2), closed ? '' : 'data-value--up'],
             ['昨收', data.pre_close.toFixed(2)],
-            ['最低', data.low.toFixed(2), 'data-value--down'],
+            ['最低', data.low.toFixed(2), closed ? '' : 'data-value--down'],
             ['成交量', fmt(data.volume)],
             ['成交额', fmt(data.amount)],
           ].map(([l,v,c]) => (
