@@ -77,7 +77,7 @@ const AnnouncementCard = React.memo(function AnnouncementCard({ data, loading }:
                   </span>
                 </div>
               </div>
-              <LinkOutlined style={{color:'var(--text-tertiary)',fontSize:'0.75rem',flexShrink:0,opacity:0.5}}/>
+              <LinkOutlined className="list-link-icon" style={{color:'var(--text-tertiary)',fontSize:'0.75rem',flexShrink:0,opacity:0.5}}/>
             </a>
           );
         })}
