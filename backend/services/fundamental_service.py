@@ -84,8 +84,19 @@ class FundamentalService:
         if val is None or val == '' or val == '--' or val == 'N/A':
             return default
         try:
-            s = str(val).strip().rstrip('%')
-            return float(s)
+            s = str(val).strip()
+            # 处理百分号
+            if s.endswith('%'):
+                s = s[:-1]
+            # 处理中文单位：亿、万
+            multiplier = 1.0
+            if s.endswith('亿'):
+                s = s[:-1]
+                multiplier = 1e8
+            elif s.endswith('万'):
+                s = s[:-1]
+                multiplier = 1e4
+            return float(s) * multiplier
         except (ValueError, TypeError):
             return default
 
