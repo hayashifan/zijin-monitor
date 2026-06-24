@@ -171,7 +171,7 @@ class FundamentalService:
 
     @staticmethod
     def _fetch_sina_price(stock_code: str) -> Optional[float]:
-        """从新浪获取当前股价（同步，用于PE/PB计算）"""
+        """从新浪获取股价（同步，用于PE/PB计算）—— 收盘后用昨收兜底"""
         import requests as req
         try:
             prefix = 'sh' if stock_code.startswith('6') else 'sz'
@@ -187,7 +187,11 @@ class FundamentalService:
             data = text.split('="')[1].rstrip('";')
             parts = data.split(',')
             price = float(parts[3]) if len(parts) > 3 else 0
-            return price if price > 0 else None
+            if price > 0:
+                return price
+            # 收盘后当前价为0，用昨收兜底
+            pre_close = float(parts[2]) if len(parts) > 2 else 0
+            return pre_close if pre_close > 0 else None
         except Exception:
             return None
 
