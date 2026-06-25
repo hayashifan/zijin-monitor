@@ -4,15 +4,19 @@ import {
   ReloadOutlined, LineChartOutlined,
   FundOutlined,
 } from '@ant-design/icons';
-import { stockAPI, commodityAPI, announcementAPI, fundamentalAPI, quantAPI } from './services/api';
-import { StockQuote, CommodityPrice, Announcement, FinancialOverview, QuantReport } from './types';
+import { stockAPI, commodityAPI, announcementAPI, fundamentalAPI, quantAPI, technicalAPI } from './services/api';
+import { StockQuote, CommodityPrice, Announcement, FinancialOverview, QuantReport, TechnicalIndicators, GoldVolatility } from './types';
 import { fmtTime } from './components/constants';
 import KlineChart, { KlineItem } from './components/KlineChart';
 import StockCard from './components/StockCard';
 import CommodityCard from './components/CommodityCard';
+import CommodityHistoryChart from './components/CommodityHistoryChart';
 import AnnouncementCard from './components/AnnouncementCard';
 import FundamentalCard from './components/FundamentalCard';
 import QuantCard from './components/QuantCard';
+import CorrelationCard from './components/CorrelationCard';
+import GoldVolatilityCard from './components/GoldVolatilityCard';
+import GoldHoverCard from './components/GoldHoverCard';
 import './App.css';
 
 const SunSvg = () => <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>;
@@ -30,9 +34,11 @@ function App() {
   const [gold, setGold] = useState<CommodityPrice|null>(null);
   const [copperLME, setCopperLME] = useState<CommodityPrice|null>(null);
   const [copperSHFE, setCopperSHFE] = useState<CommodityPrice|null>(null);
+  const [goldVolatility, setGoldVolatility] = useState<GoldVolatility|null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [metrics, setMetrics] = useState<FinancialOverview|null>(null);
   const [quantReport, setQuantReport] = useState<QuantReport|null>(null);
+  const [indicators, setIndicators] = useState<TechnicalIndicators|null>(null);
   const [klineData, setKlineData] = useState<KlineItem[]>([]);
   const [klinePeriod, setKlinePeriod] = useState<number>(30);
   const [flashA, setFlashA] = useState(false);
@@ -54,11 +60,13 @@ function App() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, c, a, m, k, q] = await Promise.allSettled([
+      const [s, c, a, m, k, q, ti, gv] = await Promise.allSettled([
         stockAPI.getOverview(), commodityAPI.getOverview(),
         announcementAPI.getList('601899','cninfo',1,10), fundamentalAPI.getOverview('601899'),
         stockAPI.getHistory('601899','A',klinePeriod),
         quantAPI.getLatest(),
+        technicalAPI.getIndicators('601899','A',120),
+        commodityAPI.getGoldVolatility(),
       ]);
       if (!mountedRef.current) return;
       if (s.status==='fulfilled' && s.value?.data?.success) {
@@ -97,6 +105,12 @@ function App() {
       }
       if (q.status==='fulfilled' && q.value?.data?.success) {
         setQuantReport(q.value.data.data ?? null);
+      }
+      if (ti.status==='fulfilled' && ti.value?.data?.success) {
+        setIndicators(ti.value.data.data ?? null);
+      }
+      if (gv.status==='fulfilled' && gv.value?.data?.success) {
+        setGoldVolatility(gv.value.data.data ?? null);
       }
       setLastUpdate(new Date());
     } catch { if (mountedRef.current) message.error('数据获取失败'); } finally { if (mountedRef.current) setLoading(false); }
@@ -181,19 +195,27 @@ function App() {
               ))}
             </div>
           </div>
-          <KlineChart data={klineData} theme={theme} period={klinePeriod} />
+          <KlineChart data={klineData} theme={theme} period={klinePeriod} indicators={indicators?.data ?? null} />
 
           <div className="section-label">量化分析</div>
           <Row gutter={[16,16]}>
             <Col xs={24}><QuantCard data={quantReport} loading={loading} /></Col>
           </Row>
 
+          <div className="section-label">关联性分析</div>
+          <Row gutter={[16,16]}>
+            <Col xs={24}><CorrelationCard theme={theme} /></Col>
+          </Row>
+
           <div className="section-label">大宗商品</div>
           <Row gutter={[16,16]}>
-            <Col xs={24} sm={8}><CommodityCard data={gold} type="gold" loading={loading} /></Col>
+            <Col xs={24} sm={8}><GoldHoverCard data={gold} loading={loading} volatility={goldVolatility} /></Col>
             <Col xs={24} sm={8}><CommodityCard data={copperLME} type="copper_lme" loading={loading} /></Col>
             <Col xs={24} sm={8}><CommodityCard data={copperSHFE} type="copper_shfe" loading={loading} /></Col>
           </Row>
+          <div style={{marginTop:'1rem'}}>
+            <CommodityHistoryChart theme={theme} />
+          </div>
 
           <div className="section-label">公司信息</div>
           <Row gutter={[16,16]}>

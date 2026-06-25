@@ -89,10 +89,16 @@ class StockService:
         cache_key = f'a_{stock_code}'
         cached = self._get_cached(cache_key)
         if cached:
-            # is_closed 基于实时价格判断，不受缓存影响
+            # is_closed 基于实时交易时间判断，不受缓存影响
             result = dict(cached)
-            result['is_closed'] = (result['price'] == 0 and result['pre_close'] > 0) or \
-                                  (result['volume'] == 0 and result['price'] == result['pre_close'] and result['pre_close'] > 0)
+            result['is_closed'] = not self._is_trading_hours()
+            # 收盘后 grace period：15:00-15:30 仍显示当天涨跌
+            now = datetime.now()
+            t_now = now.hour * 100 + now.minute
+            in_grace = (now.weekday() < 5) and (1500 < t_now <= 1530)
+            if result['is_closed'] and not in_grace:
+                result['change'] = 0
+                result['change_percent'] = 0
             return result
 
         try:
@@ -123,17 +129,21 @@ class StockService:
             change = price - pre_close if pre_close > 0 else 0
             change_pct = (change / pre_close * 100) if pre_close > 0 else 0
 
-            # A股非交易时间：Sina API 返回 price=0 或成交量=0 且价格等于昨收
-            # 两种情况都标记为 is_closed，用昨收兜底
-            is_closed = (price == 0 and pre_close > 0) or (volume == 0 and price == pre_close and pre_close > 0)
-            if is_closed:
-                if price == 0:
-                    price = pre_close
+            # A股非交易时间：基于时间判断
+            # 收盘后 grace period：15:00-15:30 仍显示当天涨跌
+            is_closed = not self._is_trading_hours()
+            now = datetime.now()
+            t_now = now.hour * 100 + now.minute
+            in_grace = (now.weekday() < 5) and (1500 < t_now <= 1530)
+            if is_closed and not in_grace:
+                change = 0
+                change_pct = 0
+            # API返回price=0时用昨收兜底
+            if price == 0 and pre_close > 0:
+                price = pre_close
                 open_price = pre_close if open_price == 0 else open_price
                 high = pre_close if high == 0 else high
                 low = pre_close if low == 0 else low
-                change = 0
-                change_pct = 0
 
             result = {
                 'code': stock_code,
