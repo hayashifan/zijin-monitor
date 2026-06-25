@@ -23,12 +23,17 @@ export const commodityAPI = {
   getCopperLME: () => api.get('/api/commodity/copper/lme'),
   getCopperSHFE: () => api.get('/api/commodity/copper/shfe'),
   getOverview: () => api.get('/api/commodity/overview'),
+  getHistory: (type: string, days: number = 30) =>
+    api.get(`/api/commodity/history/${type}`, { params: { days } }),
+  getGoldVolatility: () => api.get('/api/commodity/gold-volatility'),
 };
 
 // Announcement API
 export const announcementAPI = {
   getList: (code: string = '601899', source: string = 'cninfo', page: number = 1, size: number = 20) =>
     api.get('/api/announcement/list', { params: { code, source, page, size } }),
+  getDetail: (id: string) =>
+    api.get(`/api/announcement/detail/${id}`),
 };
 
 // Fundamental API
@@ -50,6 +55,20 @@ export const fundamentalAPI = {
 export const quantAPI = {
   getLatest: () => api.get('/api/quant/latest'),
   getList: (limit: number = 10) => api.get('/api/quant/list', { params: { limit } }),
+};
+
+// Correlation API
+export const correlationAPI = {
+  getCommodity: (types: string = 'gold,copper_lme,copper_shfe', days: number = 60) =>
+    api.get('/api/correlation/commodity', { params: { types, days } }),
+  getQuant: (days: number = 90) =>
+    api.get('/api/correlation/quant', { params: { days } }),
+};
+
+// Technical Indicators API
+export const technicalAPI = {
+  getIndicators: (code: string = '601899', market: string = 'A', days: number = 120) =>
+    api.get('/api/technical/indicators', { params: { code, market, days } }),
 };
 
 export default api;

@@ -223,6 +223,7 @@ h1, h2, h3, h4, h5, h6, .stock-name, .commodity-title, .nav-title, .hero-heading
 .card--blue::before  { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
 .card--orange::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #f97316, #fb923c); }
 .card--gold::before  { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #DAA520, #FFD700); }
+.card--gold-vol::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #faad14, #ff4d4f); }
 .card--red::before   { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #ef4444, #f87171); }
 .card-head {
   padding: 0.875rem 1.25rem;
@@ -638,3 +639,172 @@ h1, h2, h3, h4, h5, h6, .stock-name, .commodity-title, .nav-title, .hero-heading
 
 .cache-badge { font-size: 0.5625rem; font-weight: 600; padding: 0.0625rem 0.375rem; border-radius: 0.25rem; background: var(--accent-bg); color: var(--accent); margin-left: auto; }
 .report-date-label { margin-top: 0.75rem; font-size: 0.625rem; color: var(--text-tertiary); text-align: right; }
+
+/* ── 公告详情弹窗 ─────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: modalFadeIn 0.15s var(--ease);
+}
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal-content {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  width: 100%;
+  max-width: 42rem;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideUp 0.2s var(--ease);
+  overflow: hidden;
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 1rem;
+}
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+  font-size: 0.875rem;
+}
+.modal-close:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+.modal-body {
+  padding: 1.25rem;
+  overflow-y: auto;
+  flex: 1;
+  overscroll-behavior: contain;
+}
+.announcement-content {
+  max-height: 55vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.announcement-content pre {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+.announcement-content pre::-webkit-scrollbar { width: 6px; }
+.announcement-content pre::-webkit-scrollbar-track { background: transparent; }
+.announcement-content pre::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+.modal-body .btn { margin-top: 0; }
+
+/* ── 黄金波动率卡片 ─────────────────────────── */
+.vol-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.vol-icon { font-size: 1rem; }
+.vol-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.vol-badge {
+  margin-left: auto;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.05em;
+}
+.vol-gauge {
+  display: flex;
+  justify-content: center;
+  margin: 0.25rem 0 0.5rem;
+}
+.vol-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  text-align: center;
+}
+.vol-stat-value {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.vol-stat-label {
+  font-size: 0.5625rem;
+  color: var(--text-tertiary);
+  margin-top: 0.125rem;
+}
+.vol-sparkline {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+  opacity: 0.7;
+}
+
+/* ── 黄金卡片 hover 浮现波动率 ────────────────── */
+.gold-hover-wrap {
+  position: relative;
+}
+.gold-hover-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  opacity: 0;
+  transform: scale(0.92) translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.4));
+}
+.gold-hover-overlay.gold-hover-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+/* 黄金卡片 hover 时微微上浮 + 发光 */
+.gold-hover-wrap:hover > .card--gold {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(218, 165, 32, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
