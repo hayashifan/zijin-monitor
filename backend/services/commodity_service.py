@@ -4,63 +4,39 @@ Sina国际期货行情有限流，需要缓存降低请求频率
 """
 import re
 import json as _json
-import requests
-import time
-import numpy as np
 import asyncio
-from typing import Optional, Dict, Any
+import numpy as np
+from typing import Optional
+
+from core.cache import TtlCacheManager
+from core.http import get_session, get_sync
 
 
 class CommodityService:
     def __init__(self):
-        self.session = requests.Session()
-        self.session.trust_env = False
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Referer': 'https://finance.sina.com.cn/',
-        })
-        self._cache: Dict[str, tuple] = {}
-        self._ttl = {
-            'gold': 300,
-            'copper_lme': 300,
-            'copper_shfe': 60,
-            'gold_volatility': 600,
-        }
-        self._max_retries = 2
-        self._retry_delay = 1.0
-
-    def _get_cached(self, key: str) -> Optional[dict]:
-        if key in self._cache:
-            data, ts = self._cache[key]
-            ttl = self._ttl.get(key, 300)
-            if time.time() - ts < ttl:
-                return data
-        return None
-
-    def _set_cache(self, key: str, data: dict):
-        self._cache[key] = (data, time.time())
-        if len(self._cache) > 50:
-            now = time.time()
-            expired = [k for k, (_, ts) in self._cache.items() if now - ts > 600]
-            for k in expired:
-                del self._cache[k]
+        self.session = get_session()
+        self._cache = TtlCacheManager(
+            ttl_map={
+                'gold': 300,
+                'copper_lme': 300,
+                'copper_shfe': 60,
+                'gold_volatility': 600,
+            },
+            max_size=50,
+            default_ttl=300,
+        )
 
     def _get_sina_sync(self, code: str) -> str:
         """同步获取新浪数据（在线程中运行）"""
-        for attempt in range(self._max_retries):
-            try:
-                url = f"https://hq.sinajs.cn/list={code}"
-                resp = self.session.get(url, timeout=10)
-                resp.encoding = 'gbk'
-                if '="' not in resp.text:
-                    return ''
-                return resp.text.split('="')[1].rstrip('";')
-            except Exception as e:
-                if attempt < self._max_retries - 1:
-                    time.sleep(self._retry_delay * (attempt + 1))
-                else:
-                    print(f"[commodity] Sina API failed after {self._max_retries} attempts: {e}")
-                    return ''
+        text = get_sync(
+            f"https://hq.sinajs.cn/list={code}",
+            timeout=10,
+            encoding='gbk',
+            max_retries=2,
+        )
+        if '="' not in text:
+            return ''
+        return text.split('="')[1].rstrip('";')
 
     async def _get_sina(self, code: str) -> str:
         """异步包装"""
@@ -117,7 +93,7 @@ class CommodityService:
             return None
 
     async def get_gold_price(self) -> Optional[dict]:
-        cached = self._get_cached('gold')
+        cached = self._cache.get('gold')
         if cached:
             return cached
         data = await self._get_sina('hf_GC')
@@ -129,7 +105,6 @@ class CommodityService:
                     pre_close = float(parts[7])
                     change = price - pre_close if pre_close > 0 else 0
                     change_pct = (change / pre_close * 100) if pre_close > 0 else 0
-                    # parts[6]=时间 "17:34:58", parts[12]=日期 "2026-06-24"
                     ts = f"{parts[12]} {parts[6]}" if len(parts) > 12 and parts[12] and parts[6] else None
                     result = {
                         'type': 'gold', 'name': '纽约金',
@@ -139,17 +114,17 @@ class CommodityService:
                     }
                     if ts:
                         result['timestamp'] = ts
-                    self._set_cache('gold', result)
+                    self._cache.set('gold', result)
                     return result
             except Exception as e:
                 print(f"[commodity] Gold parse error: {e}")
         result = await asyncio.to_thread(self._get_eastmoney_gold_sync)
         if result:
-            self._set_cache('gold', result)
+            self._cache.set('gold', result)
         return result
 
     async def get_copper_lme(self) -> Optional[dict]:
-        cached = self._get_cached('copper_lme')
+        cached = self._cache.get('copper_lme')
         if cached:
             return cached
         data = await self._get_sina('hf_HG')
@@ -170,13 +145,13 @@ class CommodityService:
                     }
                     if ts:
                         result['timestamp'] = ts
-                    self._set_cache('copper_lme', result)
+                    self._cache.set('copper_lme', result)
                     return result
             except Exception as e:
                 print(f"[commodity] LME copper parse error: {e}")
         result = await asyncio.to_thread(self._get_eastmoney_copper_lme_sync)
         if result:
-            self._set_cache('copper_lme', result)
+            self._cache.set('copper_lme', result)
         return result
 
     async def get_copper_shfe(self) -> Optional[dict]:
@@ -187,7 +162,7 @@ class CommodityService:
           [5] 0  [6] 开盘  [7] 昨收  [8] 结算  [9] 0  [10] 昨结算
           [17] 交易日期 "2026-06-24"
         """
-        cached = self._get_cached('copper_shfe')
+        cached = self._cache.get('copper_shfe')
         if cached:
             return cached
         data = await self._get_sina('nf_CU0')
@@ -214,7 +189,7 @@ class CommodityService:
                     }
                     if trade_date:
                         result['timestamp'] = trade_date
-                    self._set_cache('copper_shfe', result)
+                    self._cache.set('copper_shfe', result)
                     return result
             except Exception as e:
                 print(f"[commodity] SHFE copper parse error: {e}")
@@ -353,7 +328,7 @@ class CommodityService:
         使用滚动对数收益率标准差 × √252 年化
         """
         cache_key = f'gold_volatility_{window}'
-        cached = self._get_cached(cache_key)
+        cached = self._cache.get(cache_key)
         if cached:
             return cached
 
@@ -414,7 +389,7 @@ class CommodityService:
                 'data_points': len(vol_series),
                 'sparkline': [round(v, 4) for v in sparkline],
             }
-            self._set_cache(cache_key, result)
+            self._cache.set(cache_key, result)
             return result
         except Exception as e:
             print(f"[commodity] Gold volatility calc failed: {e}")

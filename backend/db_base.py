@@ -9,16 +9,8 @@ _DB_DIR = Path(__file__).resolve().parent
 DATABASE_PATH = str((_DB_DIR / config.DATABASE_PATH).resolve())
 
 
-async def get_db():
-    db = await aiosqlite.connect(DATABASE_PATH)
-    db.row_factory = aiosqlite.Row
-    try:
-        yield db
-    finally:
-        await db.close()
-
-
 async def init_db():
+    """初始化数据库（建表 + 索引 + 清理）"""
     async with aiosqlite.connect(DATABASE_PATH) as db:
         # ── 股票实时行情表 ──
         await db.execute("""

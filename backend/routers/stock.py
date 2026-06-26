@@ -1,5 +1,6 @@
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+import aiosqlite
 from typing import Optional
 from services.stock_service import stock_service
 from database import save_stock_realtime, get_db
@@ -9,7 +10,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/realtime")
-async def get_realtime_quote(code: str = "601899", market: str = "A"):
+async def get_realtime_quote(
+    code: str = "601899",
+    market: str = "A",
+    db: aiosqlite.Connection = Depends(get_db),
+):
     try:
         if market.upper() == "A":
             quote = await stock_service.get_realtime_quote(code)
@@ -17,9 +22,9 @@ async def get_realtime_quote(code: str = "601899", market: str = "A"):
             quote = await stock_service.get_hk_quote(code)
         else:
             raise HTTPException(status_code=400, detail="Invalid market. Use 'A' or 'HK'")
-        
+
         if quote:
-            await save_stock_realtime(quote)
+            await save_stock_realtime(quote, db=db)
             return {"success": True, "data": quote}
         return {"success": False, "message": "No data available"}
     except HTTPException:
@@ -30,8 +35,8 @@ async def get_realtime_quote(code: str = "601899", market: str = "A"):
 
 @router.get("/history")
 async def get_stock_history(
-    code: str = "601899", 
-    market: str = "A", 
+    code: str = "601899",
+    market: str = "A",
     days: int = 30
 ):
     try:
@@ -48,7 +53,7 @@ async def get_stock_overview():
     try:
         a_quote = await stock_service.get_realtime_quote("601899")
         hk_quote = await stock_service.get_hk_quote("02899")
-        
+
         return {
             "success": True,
             "data": {

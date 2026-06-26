@@ -4,8 +4,11 @@ from datetime import datetime
 import db_base
 
 
-async def save_stock_realtime(stock_data: dict):
-    async with aiosqlite.connect(db_base.DATABASE_PATH) as db:
+async def save_stock_realtime(stock_data: dict, db: aiosqlite.Connection = None):
+    close_after = db is None
+    if db is None:
+        db = await aiosqlite.connect(db_base.DATABASE_PATH)
+    try:
         await db.execute("""
             INSERT OR REPLACE INTO stock_realtime
             (stock_code, market, name, price, change, change_percent,
@@ -31,10 +34,16 @@ async def save_stock_realtime(stock_data: dict):
             datetime.now()
         ))
         await db.commit()
+    finally:
+        if close_after:
+            await db.close()
 
 
-async def save_stock_history(history_data: dict):
-    async with aiosqlite.connect(db_base.DATABASE_PATH) as db:
+async def save_stock_history(history_data: dict, db: aiosqlite.Connection = None):
+    close_after = db is None
+    if db is None:
+        db = await aiosqlite.connect(db_base.DATABASE_PATH)
+    try:
         await db.execute("""
             INSERT OR REPLACE INTO stock_history
             (stock_code, trade_date, open, high, low, close, volume, amount)
@@ -50,3 +59,6 @@ async def save_stock_history(history_data: dict):
             history_data.get('amount')
         ))
         await db.commit()
+    finally:
+        if close_after:
+            await db.close()

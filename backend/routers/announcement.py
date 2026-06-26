@@ -1,8 +1,9 @@
 import logging
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+import aiosqlite
 from typing import Optional
 from services.announcement_service import announcement_service
-from database import save_announcement
+from database import save_announcement, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,8 @@ async def get_announcements(
     code: str = "601899",
     source: str = "cninfo",
     page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100)
+    size: int = Query(20, ge=1, le=100),
+    db: aiosqlite.Connection = Depends(get_db),
 ):
     """获取公告列表"""
     try:
@@ -23,12 +25,11 @@ async def get_announcements(
             announcements = await announcement_service.get_hkex_announcements(code)
         else:
             raise HTTPException(status_code=400, detail="Invalid source. Use 'cninfo' or 'hkex'")
-        
-        # 保存到数据库
+
         for ann in announcements:
             ann['stock_code'] = code
-            await save_announcement(ann)
-        
+            await save_announcement(ann, db=db)
+
         return {
             "success": True,
             "data": announcements,

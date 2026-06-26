@@ -17,49 +17,49 @@ def svc():
 class TestATradingHours:
     def test_weekday_trading(self, svc):
         """周一 10:00 → 交易中"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 10, 0)  # 周一
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_trading_hours() is True
 
     def test_weekday_before_open(self, svc):
         """周一 9:00 → 未开盘"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 9, 0)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_trading_hours() is False
 
     def test_weekday_lunch_break(self, svc):
         """周一 12:30 → 午休"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 12, 30)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_trading_hours() is False
 
     def test_weekday_after_close(self, svc):
         """周一 15:30 → 已收盘"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 15, 30)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_trading_hours() is False
 
     def test_weekend(self, svc):
         """周六 → 非交易"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 20, 10, 0)  # 周六
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_trading_hours() is False
 
     def test_boundary_915(self, svc):
         """9:15 准时开盘"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 9, 15)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_trading_hours() is True
 
     def test_boundary_1500(self, svc):
         """15:00 准时收盘"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 15, 0)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_trading_hours() is True
@@ -70,56 +70,56 @@ class TestATradingHours:
 class TestHKTradingHours:
     def test_morning_session(self, svc):
         """港股早盘 10:00 → 交易中"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 10, 0)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_hk_trading_hours() is True
 
     def test_afternoon_session(self, svc):
         """港股午盘 14:00 → 交易中"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 14, 0)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_hk_trading_hours() is True
 
     def test_lunch_break(self, svc):
         """港股午休 12:30 → 非交易"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 12, 30)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_hk_trading_hours() is False
 
     def test_before_open(self, svc):
         """港股 9:00 → 未开盘"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 9, 0)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_hk_trading_hours() is False
 
     def test_after_close(self, svc):
         """港股 17:00 → 已收盘"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 17, 0)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_hk_trading_hours() is False
 
     def test_boundary_930(self, svc):
         """港股 9:30 准时开盘"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 9, 30)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_hk_trading_hours() is True
 
     def test_boundary_1600(self, svc):
         """港股 16:00 准时收盘"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 23, 16, 0)
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_hk_trading_hours() is True
 
     def test_weekend(self, svc):
         """周六 → 非交易"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             mock_dt.now.return_value = datetime(2026, 6, 20, 10, 0)  # 周六
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             assert svc._is_hk_trading_hours() is False
@@ -190,7 +190,7 @@ class TestAShareIsClosed:
 class TestHKGracePeriod:
     def test_in_grace_keeps_change(self, svc):
         """16:15 (grace period) → 保留变动"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             fake_now = datetime(2026, 6, 23, 16, 15)  # 周一
             mock_dt.now.return_value = fake_now
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
@@ -202,7 +202,7 @@ class TestHKGracePeriod:
 
     def test_after_grace_clears_change(self, svc):
         """17:00 (过了 grace) → 清零"""
-        with patch('services.stock_service.datetime') as mock_dt:
+        with patch('core.utils.datetime') as mock_dt:
             fake_now = datetime(2026, 6, 23, 17, 0)
             mock_dt.now.return_value = fake_now
             mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)

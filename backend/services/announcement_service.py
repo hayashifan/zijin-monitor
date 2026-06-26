@@ -1,40 +1,27 @@
 """
 公告爬虫服务 - 东方财富 + 缓存
 """
-import requests
 import asyncio
 from datetime import datetime
 from typing import List, Dict, Optional
 import time
+
+from core.http import get_session
+from core.cache import CacheManager
 
 
 class AnnouncementService:
     """公告爬虫服务"""
 
     def __init__(self):
-        self.session = requests.Session()
-        self.session.trust_env = False
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json',
-        })
-        self._cache: Dict[str, tuple] = {}
-        self._cache_ttl = 600  # 10分钟缓存
+        self.session = get_session()
+        self._cache = CacheManager(max_size=50, default_ttl=600)
 
     def _get_cached(self, key: str) -> Optional[list]:
-        if key in self._cache:
-            data, ts = self._cache[key]
-            if time.time() - ts < self._cache_ttl:
-                return data
-        return None
+        return self._cache.get(key)
 
     def _set_cache(self, key: str, data: list):
-        self._cache[key] = (data, time.time())
-        if len(self._cache) > 50:
-            now = time.time()
-            expired = [k for k, (_, ts) in self._cache.items() if now - ts > self._cache_ttl * 2]
-            for k in expired:
-                del self._cache[k]
+        self._cache.set(key, data)
 
     async def get_eastmoney_announcements(self, stock_code: str, page: int = 1, size: int = 20) -> List[Dict]:
         """从东方财富获取公告"""
@@ -99,9 +86,6 @@ class AnnouncementService:
 
             return announcements
 
-        except requests.exceptions.RequestException as e:
-            print(f"[announcement] Network error: {e}")
-            return []
         except Exception as e:
             print(f"[announcement] Error fetching eastmoney announcements: {e}")
             return []

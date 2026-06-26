@@ -3,8 +3,11 @@ import aiosqlite
 import db_base
 
 
-async def save_announcement(announcement_data: dict):
-    async with aiosqlite.connect(db_base.DATABASE_PATH) as db:
+async def save_announcement(announcement_data: dict, db: aiosqlite.Connection = None):
+    close_after = db is None
+    if db is None:
+        db = await aiosqlite.connect(db_base.DATABASE_PATH)
+    try:
         await db.execute("""
             INSERT OR IGNORE INTO announcement
             (stock_code, title, category, source, url, publish_date, summary)
@@ -19,3 +22,6 @@ async def save_announcement(announcement_data: dict):
             announcement_data.get('summary')
         ))
         await db.commit()
+    finally:
+        if close_after:
+            await db.close()

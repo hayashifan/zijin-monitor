@@ -3,20 +3,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 import config
-from database import init_db
+from db_base import init_db
+from core.db import get_database
 from routers import stock, commodity, announcement, fundamental, quant, correlation, technical_indicators
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    # Startup: 初始化数据库连接池
+    db = get_database()
+    await db.connect()
     await init_db()
     yield
-    # Shutdown
+    # Shutdown: 关闭连接
+    await db.close()
 
 app = FastAPI(
     title="紫金单股监控器",
     description="紫金矿业(601899/02899)个股监控系统",
-    version="1.0.0",
+    version="1.5.0",
     lifespan=lifespan
 )
 

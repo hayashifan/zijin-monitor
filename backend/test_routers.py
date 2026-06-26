@@ -5,14 +5,23 @@ import pytest
 from datetime import datetime, timedelta
 from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi.testclient import TestClient
+import aiosqlite
 
 
 @pytest.fixture
 def client():
-    """创建测试客户端（mock 掉数据库初始化）"""
+    """创建测试客户端（mock 掉数据库初始化和 get_db 依赖）"""
+    mock_conn = AsyncMock(spec=aiosqlite.Connection)
+
+    async def _mock_get_db():
+        yield mock_conn
+
     with patch('database.init_db', new_callable=AsyncMock):
         from main import app
-        return TestClient(app)
+        from database import get_db
+        app.dependency_overrides[get_db] = _mock_get_db
+        yield TestClient(app)
+        app.dependency_overrides.clear()
 
 
 # ── /api/commodity/history/{type} ─────────────────────

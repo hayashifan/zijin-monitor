@@ -3,8 +3,11 @@ import aiosqlite
 import db_base
 
 
-async def save_company_fundamental(fundamental_data: dict):
-    async with aiosqlite.connect(db_base.DATABASE_PATH) as db:
+async def save_company_fundamental(fundamental_data: dict, db: aiosqlite.Connection = None):
+    close_after = db is None
+    if db is None:
+        db = await aiosqlite.connect(db_base.DATABASE_PATH)
+    try:
         await db.execute("""
             INSERT OR REPLACE INTO company_fundamental
             (stock_code, report_date, report_type, revenue, net_profit,
@@ -28,3 +31,6 @@ async def save_company_fundamental(fundamental_data: dict):
             fundamental_data.get('total_liabilities')
         ))
         await db.commit()
+    finally:
+        if close_after:
+            await db.close()

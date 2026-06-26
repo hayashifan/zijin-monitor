@@ -10,6 +10,9 @@ import asyncio
 from datetime import datetime
 from typing import Optional, Dict, List
 
+from core.cache import CacheManager
+from core.utils import safe_float as _core_safe_float
+
 # akshare 并发限制（避免线程池耗尽）
 _AKSHARE_SEMAPHORE = None  # 延迟初始化
 
@@ -45,7 +48,6 @@ def _load_disk_cache(key: str) -> Optional[dict]:
     try:
         with open(path, 'r', encoding='utf-8') as f:
             wrapper = json.load(f)
-        # 检查是否过期（过期但仍可用作fallback）
         return wrapper
     except Exception:
         return None
@@ -72,7 +74,6 @@ def _get_valid_data(key: str, ttl_key: str) -> Optional[dict]:
     wrapper = _load_disk_cache(key)
     if wrapper is None:
         return None
-    # 即使过期也返回（基本面数据隔天看没问题）
     return wrapper.get('data')
 
 
@@ -81,43 +82,16 @@ class FundamentalService:
 
     @staticmethod
     def _safe_float(val, default=0.0):
-        if val is None or val == '' or val == '--' or val == 'N/A':
-            return default
-        try:
-            s = str(val).strip()
-            # 处理百分号
-            if s.endswith('%'):
-                s = s[:-1]
-            # 处理中文单位：亿、万
-            multiplier = 1.0
-            if s.endswith('亿'):
-                s = s[:-1]
-                multiplier = 1e8
-            elif s.endswith('万'):
-                s = s[:-1]
-                multiplier = 1e4
-            return float(s) * multiplier
-        except (ValueError, TypeError):
-            return default
+        return _core_safe_float(val, default)
 
     def __init__(self):
-        self._memory_cache: Dict[str, tuple] = {}
-        self._memory_ttl = 300  # 内存缓存5分钟
+        self._memory_cache = CacheManager(max_size=50, default_ttl=300)
 
     def _get_memory(self, key: str) -> Optional[dict]:
-        if key in self._memory_cache:
-            data, ts = self._memory_cache[key]
-            if time.time() - ts < self._memory_ttl:
-                return data
-        return None
+        return self._memory_cache.get(key)
 
     def _set_memory(self, key: str, data):
-        self._memory_cache[key] = (data, time.time())
-        if len(self._memory_cache) > 50:
-            now = time.time()
-            expired = [k for k, (_, ts) in self._memory_cache.items() if now - ts > self._memory_ttl * 2]
-            for k in expired:
-                del self._memory_cache[k]
+        self._memory_cache.set(key, data)
 
     async def get_financial_summary(self, stock_code: str) -> Optional[Dict]:
         """获取公司财务摘要数据"""
@@ -172,14 +146,12 @@ class FundamentalService:
     @staticmethod
     def _fetch_sina_realtime(stock_code: str) -> Optional[dict]:
         """从新浪获取实时行情（同步）—— 返回 price + volume"""
-        import requests as req
+        from core.http import get_session
         try:
             prefix = 'sh' if stock_code.startswith('6') else 'sz'
             url = f"https://hq.sinajs.cn/list={prefix}{stock_code}"
-            s = req.Session()
-            s.trust_env = False
-            s.headers.update({'User-Agent': 'Mozilla/5.0', 'Referer': 'https://finance.sina.com.cn/'})
-            resp = s.get(url, timeout=10)
+            session = get_session()
+            resp = session.get(url, timeout=10)
             resp.encoding = 'gbk'
             text = resp.text
             if '="' not in text:
@@ -190,7 +162,7 @@ class FundamentalService:
             if price <= 0:
                 pre_close = float(parts[2]) if len(parts) > 2 else 0
                 price = pre_close if pre_close > 0 else 0
-            volume = float(parts[8]) if len(parts) > 8 else 0  # 成交量（股）
+            volume = float(parts[8]) if len(parts) > 8 else 0
             return {'price': price, 'volume': volume} if price > 0 else None
         except Exception:
             return None
@@ -233,7 +205,6 @@ class FundamentalService:
             if realtime and realtime['price'] > 0:
                 price = realtime['price']
                 volume = realtime['volume']
-                # 尝试从财务摘要获取EPS/BVPS
                 fin_key = f'financial_{stock_code}'
                 fin = self._get_memory(fin_key)
                 if fin is None:
@@ -245,11 +216,9 @@ class FundamentalService:
                     bvps = self._safe_float(latest.get('bvps', 0))
                 pe = round(price / eps, 1) if eps > 0 else 0
                 pb = round(price / bvps, 2) if bvps > 0 else 0
-                # 紫金矿业总股本约265亿股，流通股本约263亿股（大盘蓝筹基本全流通）
                 total_shares = 26500000000
                 circulating_shares = 26300000000
                 circulating_market_cap = round(price * circulating_shares, 0)
-                # 换手率 = 成交量 / 流通股本 × 100%
                 turnover_rate = round(volume / circulating_shares * 100, 2) if circulating_shares > 0 else 0
                 result = {
                     'stock_code': stock_code,
@@ -337,7 +306,6 @@ class FundamentalService:
 
         return []
 
-
     async def get_overview(self, stock_code: str) -> Optional[Dict]:
         """获取基本面概览（组合指标+财务摘要+盈利趋势）"""
         cache_key = f'overview_{stock_code}'
@@ -363,7 +331,6 @@ class FundamentalService:
             return_exceptions=True
         )
 
-        # 处理异常
         if isinstance(metrics, Exception):
             print(f"[fundamental] metrics error: {metrics}")
             metrics = None
@@ -374,7 +341,6 @@ class FundamentalService:
             print(f"[fundamental] profit error: {profit_trend}")
             profit_trend = []
 
-        # 从财务摘要提取最新数据补充到指标
         latest_financial = {}
         if summary and summary.get('data'):
             latest = summary['data'][0] if summary['data'] else {}
@@ -387,12 +353,10 @@ class FundamentalService:
                 'report_date': latest.get('report_date', ''),
             }
 
-        # 合并指标
         enhanced_metrics = {}
         if metrics:
             enhanced_metrics = {**metrics, **latest_financial}
         elif latest_financial:
-            # metrics接口失败但有财务数据，用财务数据构建基础指标
             enhanced_metrics = {
                 'stock_code': stock_code,
                 'pe_ratio': 0, 'pb_ratio': 0,

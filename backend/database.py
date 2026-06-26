@@ -4,7 +4,10 @@
 本文件 re-export 全部公开函数，现有 import 不需要改动。
 """
 # 基础配置 + 初始化
-from db_base import DATABASE_PATH, get_db, init_db
+from db_base import DATABASE_PATH, init_db
+
+# 连接管理 + FastAPI 依赖注入（从 core.db）
+from core.db import get_db, get_database
 
 # 股票
 from db_stock import save_stock_realtime, save_stock_history
@@ -26,7 +29,7 @@ from db_announcement import save_announcement
 from db_fundamental import save_company_fundamental
 
 __all__ = [
-    'DATABASE_PATH', 'get_db', 'init_db',
+    'DATABASE_PATH', 'get_db', 'get_database', 'init_db',
     'save_stock_realtime', 'save_stock_history',
     'save_commodity_price', 'save_commodity_history',
     'save_commodity_history_batch', 'get_commodity_history',

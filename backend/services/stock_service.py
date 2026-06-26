@@ -1,81 +1,58 @@
 """
 股票行情服务 - 新浪财经API + 缓存
 """
-import requests
 import json
-import time
 import asyncio
-from datetime import datetime, timedelta
 from typing import Dict, Optional
+
+from core.cache import CacheManager
+from core.http import get_session
+from core.utils import safe_float, safe_int, is_trading_hours, apply_grace_period
 
 
 class StockService:
     """股票行情服务"""
 
     def __init__(self):
-        self.session = requests.Session()
-        self.session.trust_env = False
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Referer': 'https://finance.sina.com.cn/',
-        })
-        self._cache: Dict[str, tuple] = {}
+        self._cache = CacheManager(max_size=100, default_ttl=300)
 
     def _is_trading_hours(self) -> bool:
-        """A股交易时间判断"""
-        now = datetime.now()
-        weekday = now.weekday()
-        if weekday >= 5:
-            return False
-        hour = now.hour
-        minute = now.minute
-        t = hour * 100 + minute
-        return (915 <= t <= 1130) or (1300 <= t <= 1500)
+        """A股交易时间判断（委托 core.utils）"""
+        return is_trading_hours('A')
 
     def _is_hk_trading_hours(self) -> bool:
-        """港股交易时间判断（HKT = UTC+8）"""
-        now = datetime.now()
-        weekday = now.weekday()
-        if weekday >= 5:
-            return False
-        hour = now.hour
-        minute = now.minute
-        t = hour * 100 + minute
-        # 早盘 9:30-12:00，午盘 13:00-16:00
-        return (930 <= t <= 1200) or (1300 <= t <= 1600)
+        """港股交易时间判断（委托 core.utils）"""
+        return is_trading_hours('HK')
 
     def _get_cached(self, key: str) -> Optional[dict]:
-        if key in self._cache:
-            data, ts = self._cache[key]
-            ttl = 15 if self._is_trading_hours() else 300
+        # 交易时段 15s，非交易时段 300s
+        trading = self._is_trading_hours()
+        # 手动实现动态 TTL：先检查是否在缓存中且未过期
+        if key in self._cache._store:
+            from datetime import datetime
+            import time
+            data, ts = self._cache._store[key]
+            ttl = 15 if trading else 300
             if time.time() - ts < ttl:
                 return data
+            del self._cache._store[key]
         return None
 
     def _set_cache(self, key: str, data):
-        self._cache[key] = (data, time.time())
-        # 超过 100 条时淘汰过期条目
-        if len(self._cache) > 100:
-            now = time.time()
-            expired = [k for k, (_, ts) in self._cache.items() if now - ts > 600]
-            for k in expired:
-                del self._cache[k]
+        self._cache.set(key, data)
 
     def _safe_float(self, val: str, default: float = 0.0) -> float:
-        if not val or val.strip() in ('--', 'N/A', '', 'None'):
-            return default
-        try:
-            return float(val)
-        except (ValueError, TypeError):
-            return default
+        return safe_float(val, default)
 
     def _safe_int(self, val: str, default: int = 0) -> int:
-        return int(self._safe_float(val, default))
+        return safe_int(val, default)
 
     def _get_sina(self, code: str) -> str:
+        """同步获取新浪数据"""
         try:
+            session = get_session()
             url = f"https://hq.sinajs.cn/list={code}"
-            resp = self.session.get(url, timeout=10)
+            resp = session.get(url, timeout=10)
             resp.encoding = 'gbk'
             if '="' not in resp.text:
                 return ''
@@ -89,16 +66,13 @@ class StockService:
         cache_key = f'a_{stock_code}'
         cached = self._get_cached(cache_key)
         if cached:
-            # is_closed 基于实时交易时间判断，不受缓存影响
             result = dict(cached)
-            result['is_closed'] = not self._is_trading_hours()
-            # 收盘后 grace period：15:00-15:30 仍显示当天涨跌
-            now = datetime.now()
-            t_now = now.hour * 100 + now.minute
-            in_grace = (now.weekday() < 5) and (1500 < t_now <= 1530)
-            if result['is_closed'] and not in_grace:
-                result['change'] = 0
-                result['change_percent'] = 0
+            is_closed = not self._is_trading_hours()
+            change, change_pct = apply_grace_period(
+                result['change'], result['change_percent'], is_closed, 'A')
+            result['is_closed'] = is_closed
+            result['change'] = change
+            result['change_percent'] = change_pct
             return result
 
         try:
@@ -118,26 +92,20 @@ class StockService:
                 return None
 
             name = parts[0]
-            open_price = self._safe_float(parts[1])
-            pre_close = self._safe_float(parts[2])
-            price = self._safe_float(parts[3])
-            high = self._safe_float(parts[4])
-            low = self._safe_float(parts[5])
-            volume = self._safe_int(parts[8])
-            amount = self._safe_float(parts[9])
+            open_price = safe_float(parts[1])
+            pre_close = safe_float(parts[2])
+            price = safe_float(parts[3])
+            high = safe_float(parts[4])
+            low = safe_float(parts[5])
+            volume = safe_int(parts[8])
+            amount = safe_float(parts[9])
 
             change = price - pre_close if pre_close > 0 else 0
             change_pct = (change / pre_close * 100) if pre_close > 0 else 0
 
-            # A股非交易时间：基于时间判断
-            # 收盘后 grace period：15:00-15:30 仍显示当天涨跌
             is_closed = not self._is_trading_hours()
-            now = datetime.now()
-            t_now = now.hour * 100 + now.minute
-            in_grace = (now.weekday() < 5) and (1500 < t_now <= 1530)
-            if is_closed and not in_grace:
-                change = 0
-                change_pct = 0
+            change, change_pct = apply_grace_period(change, change_pct, is_closed, 'A')
+
             # API返回price=0时用昨收兜底
             if price == 0 and pre_close > 0:
                 price = pre_close
@@ -175,16 +143,13 @@ class StockService:
         cache_key = f'hk_{stock_code}'
         cached = self._get_cached(cache_key)
         if cached:
-            # is_closed 基于实时交易时间判断，不受缓存影响
             result = dict(cached)
-            result['is_closed'] = not self._is_hk_trading_hours()
-            # 收盘后 grace period
-            now = datetime.now()
-            t_now = now.hour * 100 + now.minute
-            in_grace = (now.weekday() < 5) and (1600 < t_now <= 1630)
-            if result['is_closed'] and not in_grace:
-                result['change'] = 0
-                result['change_percent'] = 0
+            is_closed = not self._is_hk_trading_hours()
+            change, change_pct = apply_grace_period(
+                result['change'], result['change_percent'], is_closed, 'HK')
+            result['is_closed'] = is_closed
+            result['change'] = change
+            result['change_percent'] = change_pct
             return result
 
         try:
@@ -196,19 +161,12 @@ class StockService:
             if len(parts) < 15:
                 return None
 
-            price = self._safe_float(parts[6])
-            change = self._safe_float(parts[7])
-            change_pct = self._safe_float(parts[8])
+            price = safe_float(parts[6])
+            change = safe_float(parts[7])
+            change_pct = safe_float(parts[8])
 
-            # 港股非交易时间：收盘后30分钟内保留当天变动，之后清零显示灰色
             is_closed = not self._is_hk_trading_hours()
-            # 收盘后 grace period：16:00-16:30 仍显示当天涨跌
-            now = datetime.now()
-            t_now = now.hour * 100 + now.minute
-            in_grace = (now.weekday() < 5) and (1600 < t_now <= 1630)
-            if is_closed and not in_grace:
-                change = 0
-                change_pct = 0
+            change, change_pct = apply_grace_period(change, change_pct, is_closed, 'HK')
 
             result = {
                 'code': stock_code,
@@ -218,12 +176,12 @@ class StockService:
                 'price': price,
                 'change': round(change, 2),
                 'change_percent': round(change_pct, 2),
-                'open': self._safe_float(parts[2]),
-                'high': self._safe_float(parts[4]),
-                'low': self._safe_float(parts[5]),
-                'pre_close': self._safe_float(parts[3]),
-                'volume': self._safe_int(parts[12]),
-                'amount': self._safe_float(parts[11]),
+                'open': safe_float(parts[2]),
+                'high': safe_float(parts[4]),
+                'low': safe_float(parts[5]),
+                'pre_close': safe_float(parts[3]),
+                'volume': safe_int(parts[12]),
+                'amount': safe_float(parts[11]),
                 'turnover_rate': 0,
                 'pe_ratio': 0,
                 'pb_ratio': 0,
@@ -250,7 +208,8 @@ class StockService:
                     f"/var%20_{prefix}{stock_code}_kline=/CN_MarketDataService.getKLineData"
                     f"?symbol={prefix}{stock_code}&scale=240&ma=no&datalen={days}"
                 )
-                resp = await asyncio.to_thread(self.session.get, url, timeout=10)
+                session = get_session()
+                resp = await asyncio.to_thread(session.get, url, timeout=10)
                 content = resp.text
 
                 start = content.find('=(')
@@ -265,11 +224,11 @@ class StockService:
                 for item in data:
                     history.append({
                         'date': item.get('day', ''),
-                        'open': self._safe_float(item.get('open', '')),
-                        'high': self._safe_float(item.get('high', '')),
-                        'low': self._safe_float(item.get('low', '')),
-                        'close': self._safe_float(item.get('close', '')),
-                        'volume': self._safe_int(item.get('volume', '')),
+                        'open': safe_float(item.get('open', '')),
+                        'high': safe_float(item.get('high', '')),
+                        'low': safe_float(item.get('low', '')),
+                        'close': safe_float(item.get('close', '')),
+                        'volume': safe_int(item.get('volume', '')),
                         'amount': 0,
                     })
 
