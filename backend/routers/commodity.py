@@ -3,11 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Query, Depends
 import aiosqlite
 from services.commodity_service import commodity_service
-from database import (
-    save_commodity_price, save_commodity_history_batch,
-    get_commodity_history, get_commodity_history_latest_date,
-    get_db,
-)
+from database import save_commodity_price, save_commodity_history_batch, get_commodity_history, get_commodity_history_latest_date, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +15,7 @@ async def get_gold_price(db: aiosqlite.Connection = Depends(get_db)):
     try:
         gold = await commodity_service.get_gold_price()
         if gold:
-            await save_commodity_price(gold, db=db)
+            await save_commodity_price(gold)
             return {"success": True, "data": gold}
         else:
             return {"success": False, "message": "Gold price unavailable"}
@@ -32,7 +28,7 @@ async def get_copper_lme(db: aiosqlite.Connection = Depends(get_db)):
     try:
         copper = await commodity_service.get_copper_lme()
         if copper:
-            await save_commodity_price(copper, db=db)
+            await save_commodity_price(copper)
             return {"success": True, "data": copper}
         else:
             return {"success": False, "message": "LME copper price unavailable"}
@@ -45,7 +41,7 @@ async def get_copper_shfe(db: aiosqlite.Connection = Depends(get_db)):
     try:
         copper = await commodity_service.get_copper_shfe()
         if copper:
-            await save_commodity_price(copper, db=db)
+            await save_commodity_price(copper)
             return {"success": True, "data": copper}
         else:
             return {"success": False, "message": "SHFE copper price unavailable"}
@@ -53,7 +49,7 @@ async def get_copper_shfe(db: aiosqlite.Connection = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/overview")
-async def get_commodity_overview():
+async def get_commodity_overview(db: aiosqlite.Connection = Depends(get_db)):
     """获取大宗商品概览"""
     try:
         gold = await commodity_service.get_gold_price()
@@ -94,11 +90,12 @@ async def get_commodity_history_api(
         raise HTTPException(status_code=400, detail=f"Invalid type. Use: {valid_types}")
     try:
         # 先查本地缓存
-        cached = await get_commodity_history(commodity_type, days, db=db)
+        cached = await get_commodity_history(commodity_type, days)
         cache_fresh = False
         if cached:
-            latest_date = await get_commodity_history_latest_date(commodity_type, db=db)
+            latest_date = await get_commodity_history_latest_date(commodity_type)
             if latest_date:
+                # 允许3天过期（覆盖周末+节假日）
                 try:
                     latest = datetime.strptime(latest_date, "%Y-%m-%d")
                     stale_days = (datetime.now() - latest).days
@@ -112,11 +109,14 @@ async def get_commodity_history_api(
         # 从远端抓取
         history = await commodity_service.get_history(commodity_type, days)
         if history:
+            # 裁剪到请求天数
             history = history[-days:]
+            # 保存到本地
             batch = [{**h, 'commodity_type': commodity_type} for h in history]
-            await save_commodity_history_batch(batch, db=db)
+            await save_commodity_history_batch(batch)
             return {"success": True, "data": history, "from_cache": False}
 
+        # 远端失败，返回缓存（可能不完整）
         if cached:
             return {"success": True, "data": cached, "from_cache": True}
 

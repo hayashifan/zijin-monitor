@@ -1,45 +1,64 @@
 """
 core.db — 数据库连接管理 + FastAPI 依赖注入
 """
+import asyncio
 import aiosqlite
 from typing import Optional
 
 
 class Database:
-    """数据库连接管理器（lifespan 期间维护单连接）
+    """数据库连接管理器
 
-    连接延迟初始化：首次调用 get_connection() 时建立连接。
-    这样 db_base.DATABASE_PATH 可以在测试中被 patch。
+    延迟初始化：首次 get_connection() 时建立连接。
+    检测 event loop 变化（测试中 asyncio.run() 每次创建新 loop），
+    自动重建连接。
     """
 
     def __init__(self):
         self._conn: Optional[aiosqlite.Connection] = None
         self._db_path: Optional[str] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def _get_db_path(self) -> str:
+        """获取数据库路径（支持测试中 patch）"""
+        if self._db_path:
+            return self._db_path
+        from db_base import DATABASE_PATH
+        return DATABASE_PATH
 
     async def connect(self, db_path: Optional[str] = None):
-        """建立连接（lifespan startup 调用）
-
-        Args:
-            db_path: 数据库路径。None 时从 db_base.DATABASE_PATH 获取。
-        """
-        if db_path is None:
-            from db_base import DATABASE_PATH
-            db_path = DATABASE_PATH
-        self._db_path = db_path
-        self._conn = await aiosqlite.connect(db_path)
+        """建立连接"""
+        if db_path is not None:
+            self._db_path = db_path
+        path = self._get_db_path()
+        self._conn = await aiosqlite.connect(path)
         self._conn.row_factory = aiosqlite.Row
+        self._loop = asyncio.get_running_loop()
 
     async def get_connection(self) -> aiosqlite.Connection:
-        """获取连接，延迟初始化"""
+        """获取连接，延迟初始化 + event loop 检测"""
+        current_loop = asyncio.get_running_loop()
+        if self._conn is not None and self._loop is not current_loop:
+            # event loop 变了（测试场景），重建连接
+            try:
+                await self._conn.close()
+            except Exception:
+                pass
+            self._conn = None
+
         if self._conn is None:
             await self.connect()
         return self._conn
 
     async def close(self):
-        """关闭连接（lifespan shutdown 调用）"""
+        """关闭连接"""
         if self._conn:
-            await self._conn.close()
+            try:
+                await self._conn.close()
+            except Exception:
+                pass
             self._conn = None
+            self._loop = None
 
     @property
     def conn(self) -> aiosqlite.Connection:

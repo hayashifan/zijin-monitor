@@ -3,10 +3,8 @@
 所有实际实现分布在 db_base.py / db_stock.py / db_commodity.py / db_announcement.py / db_fundamental.py
 本文件 re-export 全部公开函数，现有 import 不需要改动。
 """
-# 基础配置 + 初始化
+# 基础配置 + 初始化 + 连接池
 from db_base import DATABASE_PATH, init_db
-
-# 连接管理 + FastAPI 依赖注入（从 core.db）
 from core.db import get_db, get_database
 
 # 股票

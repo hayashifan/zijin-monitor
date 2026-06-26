@@ -3,18 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 import config
-from db_base import init_db
+from database import init_db, get_db
 from core.db import get_database
 from routers import stock, commodity, announcement, fundamental, quant, correlation, technical_indicators
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: 初始化数据库连接池
-    db = get_database()
-    await db.connect()
+    # Startup
     await init_db()
     yield
-    # Shutdown: 关闭连接
+    # Shutdown
+    db = get_database()
     await db.close()
 
 app = FastAPI(

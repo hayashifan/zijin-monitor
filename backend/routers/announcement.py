@@ -25,11 +25,12 @@ async def get_announcements(
             announcements = await announcement_service.get_hkex_announcements(code)
         else:
             raise HTTPException(status_code=400, detail="Invalid source. Use 'cninfo' or 'hkex'")
-
+        
+        # 保存到数据库
         for ann in announcements:
             ann['stock_code'] = code
-            await save_announcement(ann, db=db)
-
+            await save_announcement(ann)
+        
         return {
             "success": True,
             "data": announcements,
