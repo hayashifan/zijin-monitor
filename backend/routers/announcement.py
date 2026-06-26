@@ -44,16 +44,13 @@ async def get_announcements(
 
 @router.get("/detail/{announcement_id}")
 async def get_announcement_detail(announcement_id: str):
-    """获取公告详情"""
+    """获取公告详情（正文+PDF）"""
     try:
-        # 这里可以扩展为获取公告详情
-        return {
-            "success": True,
-            "data": {
-                "id": announcement_id,
-                "message": "Detail endpoint - to be implemented"
-            }
-        }
+        detail = await announcement_service.get_announcement_detail(announcement_id)
+        if detail:
+            return {"success": True, "data": detail}
+        else:
+            return {"success": False, "message": "公告详情获取失败"}
     except Exception as e:
         logger.exception("Failed to get announcement detail")
         raise HTTPException(status_code=500, detail="服务内部错误")

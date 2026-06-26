@@ -170,8 +170,8 @@ class FundamentalService:
         return None
 
     @staticmethod
-    def _fetch_sina_price(stock_code: str) -> Optional[float]:
-        """从新浪获取股价（同步，用于PE/PB计算）—— 收盘后用昨收兜底"""
+    def _fetch_sina_realtime(stock_code: str) -> Optional[dict]:
+        """从新浪获取实时行情（同步）—— 返回 price + volume"""
         import requests as req
         try:
             prefix = 'sh' if stock_code.startswith('6') else 'sz'
@@ -187,11 +187,11 @@ class FundamentalService:
             data = text.split('="')[1].rstrip('";')
             parts = data.split(',')
             price = float(parts[3]) if len(parts) > 3 else 0
-            if price > 0:
-                return price
-            # 收盘后当前价为0，用昨收兜底
-            pre_close = float(parts[2]) if len(parts) > 2 else 0
-            return pre_close if pre_close > 0 else None
+            if price <= 0:
+                pre_close = float(parts[2]) if len(parts) > 2 else 0
+                price = pre_close if pre_close > 0 else 0
+            volume = float(parts[8]) if len(parts) > 8 else 0  # 成交量（股）
+            return {'price': price, 'volume': volume} if price > 0 else None
         except Exception:
             return None
 
@@ -227,10 +227,12 @@ class FundamentalService:
         except Exception as e:
             print(f"[fundamental] stock_zh_a_spot_em failed: {e}, trying Sina fallback")
 
-        # 方案B: Sina股价 + 财务摘要自算PE/PB
+        # 方案B: Sina实时行情 + 财务摘要自算PE/PB/流通市值/换手率
         try:
-            price = await asyncio.to_thread(self._fetch_sina_price, stock_code)
-            if price and price > 0:
+            realtime = await asyncio.to_thread(self._fetch_sina_realtime, stock_code)
+            if realtime and realtime['price'] > 0:
+                price = realtime['price']
+                volume = realtime['volume']
                 # 尝试从财务摘要获取EPS/BVPS
                 fin_key = f'financial_{stock_code}'
                 fin = self._get_memory(fin_key)
@@ -243,15 +245,19 @@ class FundamentalService:
                     bvps = self._safe_float(latest.get('bvps', 0))
                 pe = round(price / eps, 1) if eps > 0 else 0
                 pb = round(price / bvps, 2) if bvps > 0 else 0
-                # 紫金矿业总股本约265亿股（硬编码，后续可从API获取）
+                # 紫金矿业总股本约265亿股，流通股本约263亿股（大盘蓝筹基本全流通）
                 total_shares = 26500000000
+                circulating_shares = 26300000000
+                circulating_market_cap = round(price * circulating_shares, 0)
+                # 换手率 = 成交量 / 流通股本 × 100%
+                turnover_rate = round(volume / circulating_shares * 100, 2) if circulating_shares > 0 else 0
                 result = {
                     'stock_code': stock_code,
                     'pe_ratio': pe,
                     'pb_ratio': pb,
                     'total_market_cap': round(price * total_shares, 0),
-                    'circulating_market_cap': 0,
-                    'turnover_rate': 0,
+                    'circulating_market_cap': circulating_market_cap,
+                    'turnover_rate': turnover_rate,
                     'volume_ratio': 0,
                     'from_cache': False,
                     'computed_from': 'sina+financial',

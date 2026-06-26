@@ -316,14 +316,14 @@ class CommodityService:
             return data
         ANOMALY_OPEN, ANOMALY_CLOSE, ANOMALY_VOL = 3500.0, 3520.0, 50000.0
         clean = [d for d in data
-                 if not (d['open'] == ANOMALY_OPEN and d['close'] == ANOMALY_CLOSE
+                 if not (d.get('open') == ANOMALY_OPEN and d.get('close') == ANOMALY_CLOSE
                          and d.get('volume', 0) == ANOMALY_VOL)]
         # 二次过滤：连续3天以上相同 close（捕获变体占位值）
         if len(clean) < 3:
             return clean
         final = []
         for i, d in enumerate(clean):
-            if i >= 2 and d['close'] == clean[i-1]['close'] == clean[i-2]['close']:
+            if i >= 2 and d.get('close') == clean[i-1].get('close') == clean[i-2].get('close'):
                 continue
             final.append(d)
         return final

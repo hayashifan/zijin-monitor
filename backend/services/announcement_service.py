@@ -114,5 +114,54 @@ class AnnouncementService:
         """从港交所获取H股公告（简化实现）"""
         return []
 
+    async def get_announcement_detail(self, art_code: str) -> Optional[Dict]:
+        """获取公告详情（正文+PDF链接）"""
+        cache_key = f'ann_detail_{art_code}'
+        cached = self._get_cached(cache_key)
+        if cached:
+            return cached
+
+        try:
+            url = "https://np-cnotice-stock.eastmoney.com/api/content/ann"
+            params = {
+                'art_code': art_code,
+                'client_source': 'web',
+                'f_node': '0',
+                's_node': '0',
+            }
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json',
+                'Referer': 'https://data.eastmoney.com/',
+            }
+
+            response = await asyncio.to_thread(self.session.get, url, params=params, headers=headers, timeout=15)
+            response.raise_for_status()
+            result = response.json()
+
+            if not result.get('success'):
+                return None
+
+            data = result.get('data', {})
+            if not data:
+                return None
+
+            detail = {
+                'id': art_code,
+                'title': data.get('notice_title', ''),
+                'content': data.get('notice_content', ''),
+                'publish_date': (data.get('notice_date', '') or '')[:10],
+                'pdf_url': data.get('attach_url_web') or data.get('attach_url', ''),
+                'page_count': data.get('page_size', 0),
+                'source': '东方财富',
+            }
+
+            self._set_cache(cache_key, detail)
+            return detail
+
+        except Exception as e:
+            print(f"[announcement] Failed to get detail for {art_code}: {e}")
+            return None
+
 
 announcement_service = AnnouncementService()

@@ -90,7 +90,7 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
             <div className="quant-signal-box">
               <div style={{fontSize: '1.8rem', lineHeight: 1, opacity: 0.8}}>{signalIcon}</div>
               <div style={{flex: 1}}>
-                <div style={{fontSize: '1.1rem', fontWeight: 700, color: signalColor, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums'}}>
+                <div style={{fontSize: '1.1rem', fontWeight: 700, color: signalColor, fontVariantNumeric: 'tabular-nums'}}>
                   信号：{signal}
                 </div>
                 <div style={{fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 2}}>
@@ -104,7 +104,6 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
                 border: `1px solid ${confColor}30`,
                 fontSize: '0.75rem',
                 fontWeight: 600,
-                fontFamily: 'var(--font-mono)',
               }}>
                 置信 {confidence}
               </div>

@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 import config
 from database import init_db
-from routers import stock, commodity, announcement, fundamental, quant
+from routers import stock, commodity, announcement, fundamental, quant, correlation, technical_indicators
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +35,8 @@ app.include_router(commodity.router, prefix="/api/commodity", tags=["大宗商�
 app.include_router(announcement.router, prefix="/api/announcement", tags=["公告"])
 app.include_router(fundamental.router, prefix="/api/fundamental", tags=["基本面"])
 app.include_router(quant.router, prefix="/api/quant", tags=["量化分析"])
+app.include_router(correlation.router, prefix="/api/correlation", tags=["关联性分析"])
+app.include_router(technical_indicators.router, prefix="/api/technical", tags=["技术指标"])
 
 @app.get("/")
 async def root():
