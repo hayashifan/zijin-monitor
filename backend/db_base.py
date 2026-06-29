@@ -119,6 +119,24 @@ async def init_db():
 
         await db.commit()
 
+        # ── 定期报告表 ──
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS annual_report (
+                stock_code TEXT NOT NULL,
+                report_type TEXT NOT NULL,
+                report_date DATE NOT NULL,
+                title TEXT,
+                pdf_url TEXT,
+                publish_date DATE,
+                summary_llm TEXT,
+                key_metrics TEXT,
+                alert_flags TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (stock_code, report_date, report_type)
+            )
+        """)
+        await db.commit()
+
         # ── 清理异常商品数据 ──
         await db.execute("""
             DELETE FROM commodity_history
@@ -154,6 +172,16 @@ async def init_db():
         """)
         try:
             await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_announcement_url ON announcement(stock_code, url)")
+        except Exception:
+            pass
+
+        await db.execute("""
+            DELETE FROM company_fundamental WHERE id NOT IN (
+                SELECT MAX(id) FROM company_fundamental GROUP BY stock_code, report_date
+            )
+        """)
+        try:
+            await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_fundamental_stock_date ON company_fundamental(stock_code, report_date)")
         except Exception:
             pass
 

@@ -107,4 +107,11 @@ async def get_db():
     """FastAPI 依赖注入：提供 aiosqlite.Connection"""
     db = get_database()
     conn = await db.get_connection()
-    yield conn
+    try:
+        yield conn
+    finally:
+        # 不关闭连接（单例复用），但确保 pending 事务被 rollback
+        try:
+            await conn.rollback()
+        except Exception:
+            pass

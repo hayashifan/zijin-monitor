@@ -6,7 +6,7 @@ from datetime import datetime
 
 
 def safe_float(val, default: float = 0.0) -> float:
-    """统一的安全浮点转换，支持 %、亿、万 后缀"""
+    """统一的安全浮点转换，支持 %、亿、万 后缀和逗号分隔"""
     if val is None or val == '' or val == '--' or val == 'N/A' or val == 'None':
         return default
     try:
@@ -22,6 +22,8 @@ def safe_float(val, default: float = 0.0) -> float:
         elif s.endswith('万'):
             s = s[:-1]
             multiplier = 1e4
+        # 逗号分隔（东方财富 API 常见格式）
+        s = s.replace(',', '')
         return float(s) * multiplier
     except (ValueError, TypeError):
         return default

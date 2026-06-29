@@ -45,7 +45,6 @@ class AnnouncementService:
             }
 
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'application/json, text/plain, */*',
                 'Referer': f'https://data.eastmoney.com/notices/detail/{stock_code}.html',
             }
@@ -114,7 +113,6 @@ class AnnouncementService:
                 's_node': '0',
             }
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'application/json',
                 'Referer': 'https://data.eastmoney.com/',
             }

@@ -5,7 +5,7 @@ import uvicorn
 import config
 from database import init_db, get_db
 from core.db import get_database
-from routers import stock, commodity, announcement, fundamental, quant, correlation, technical_indicators
+from routers import stock, commodity, announcement, fundamental, quant, correlation, technical_indicators, report, fundamental_score
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="紫金单股监控器",
     description="紫金矿业(601899/02899)个股监控系统",
-    version="1.5.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -40,6 +40,8 @@ app.include_router(fundamental.router, prefix="/api/fundamental", tags=["基本�
 app.include_router(quant.router, prefix="/api/quant", tags=["量化分析"])
 app.include_router(correlation.router, prefix="/api/correlation", tags=["关联性分析"])
 app.include_router(technical_indicators.router, prefix="/api/technical", tags=["技术指标"])
+app.include_router(report.router, prefix="/api/report", tags=["定期报告"])
+app.include_router(fundamental_score.router, prefix="/api/fundamental-score", tags=["基本面评分"])
 
 @app.get("/")
 async def root():

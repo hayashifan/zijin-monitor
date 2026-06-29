@@ -70,10 +70,15 @@ def _save_disk_cache(key: str, data, ttl_key: str):
 
 
 def _get_valid_data(key: str, ttl_key: str) -> Optional[dict]:
-    """获取有效缓存（内存优先，磁盘兜底）"""
+    """获取有效缓存（内存优先，磁盘兜底），检查 TTL"""
     wrapper = _load_disk_cache(key)
     if wrapper is None:
         return None
+    # 检查磁盘缓存是否过期
+    saved_at = wrapper.get('saved_at', 0)
+    ttl = wrapper.get('ttl', _CACHE_TTL.get(ttl_key, 3600))
+    if time.time() - saved_at > ttl:
+        return None  # 过期，不使用
     return wrapper.get('data')
 
 

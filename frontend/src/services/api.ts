@@ -71,4 +71,22 @@ export const technicalAPI = {
     api.get('/api/technical/indicators', { params: { code, market, days } }),
 };
 
+// Report API (v2.0)
+export const reportAPI = {
+  getList: (code: string = '601899') =>
+    api.get('/api/report/list', { params: { code } }),
+  getDetail: (code: string = '601899', date: string) =>
+    api.get('/api/report/detail', { params: { code, date } }),
+  getComparison: (code: string = '601899', periods: number = 8) =>
+    api.get('/api/report/comparison', { params: { code, periods } }),
+  getAlerts: (code: string = '601899') =>
+    api.get('/api/report/alerts', { params: { code } }),
+};
+
+// Fundamental Score API (v2.0)
+export const fundamentalScoreAPI = {
+  getScore: (code: string = '601899') =>
+    api.get('/api/fundamental-score/score', { params: { code } }),
+};
+
 export default api;

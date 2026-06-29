@@ -211,3 +211,35 @@ export interface TechnicalIndicators {
   latest: IndicatorDataPoint;
   signals: IndicatorSignals;
 }
+
+// ── 定期报告 v2.0 ──────────────────────────────
+
+export interface AnnualReport {
+  stock_code: string;
+  report_type: string;      // 年报/半年报/Q1季报/Q3季报
+  report_date: string;      // 2024-12-31
+  title: string;
+  pdf_url: string;
+  publish_date: string;     // 实际发布日期
+  summary_llm: string | null;
+  key_metrics: Record<string, number> | null;
+  alert_flags: string[] | null;
+}
+
+export interface QuarterlyComparisonItem {
+  report_date: string;
+  revenue: number;
+  net_profit: number;
+  total_profit: number;
+  revenue_yoy: number | null;    // 同比 %
+  profit_yoy: number | null;     // 同比 %
+  revenue_qoq: number | null;    // 环比 %
+  profit_qoq: number | null;     // 环比 %
+}
+
+export interface ReportAlert {
+  level: 'success' | 'warning' | 'danger';
+  type: string;                  // profit_decline / revenue_decline / roe_low / eps_decline / normal
+  message: string;
+  report_date: string;
+}

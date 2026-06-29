@@ -5,7 +5,7 @@ import os
 import json
 import logging
 import asyncio
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -52,16 +52,16 @@ async def get_latest_report():
             return {"success": False, "message": "暂无量化报告"}
         return {"success": True, "data": data}
     except Exception as e:
-        return {"success": False, "message": str(e)}
+        logger.exception("Failed to get latest quant report")
+        raise HTTPException(status_code=500, detail="服务内部错误")
 
 
 @router.get("/list")
-async def list_reports(limit: int = 10):
+async def list_reports(limit: int = Query(10, ge=1, le=100)):
     """列出最近的量化报告"""
-    if limit < 1 or limit > 100:
-        limit = 10
     try:
         result = await asyncio.to_thread(_list_reports, limit)
         return {"success": True, "data": result}
     except Exception as e:
-        return {"success": False, "message": str(e)}
+        logger.exception("Failed to list quant reports")
+        raise HTTPException(status_code=500, detail="服务内部错误")

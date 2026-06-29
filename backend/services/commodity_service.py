@@ -284,24 +284,16 @@ class CommodityService:
     def _filter_anomaly(data: list) -> list:
         """过滤东方财富期货K线中的非交易日占位数据
 
-        异常特征：O=3500, H=3550, L=3480, C=3520, V=50000（周末/节假日固定值）
-        同时过滤任何连续3天以上 close 完全相同的记录。
+        异常特征：O=3500, H=3550, L=3480, C=3520, V=50000（铜期货周末固定值）
+        注意：这些阈值仅适用于铜期货，金价不会出现这些值。
         """
         if not data:
             return data
+        # 仅过滤铜期货的已知异常占位值（不影响金价数据）
         ANOMALY_OPEN, ANOMALY_CLOSE, ANOMALY_VOL = 3500.0, 3520.0, 50000.0
-        clean = [d for d in data
-                 if not (d.get('open') == ANOMALY_OPEN and d.get('close') == ANOMALY_CLOSE
-                         and d.get('volume', 0) == ANOMALY_VOL)]
-        # 二次过滤：连续3天以上相同 close（捕获变体占位值）
-        if len(clean) < 3:
-            return clean
-        final = []
-        for i, d in enumerate(clean):
-            if i >= 2 and d.get('close') == clean[i-1].get('close') == clean[i-2].get('close'):
-                continue
-            final.append(d)
-        return final
+        return [d for d in data
+                if not (d.get('open') == ANOMALY_OPEN and d.get('close') == ANOMALY_CLOSE
+                        and d.get('volume', 0) == ANOMALY_VOL)]
 
     async def get_history(self, commodity_type: str, days: int = 90) -> list:
         """获取大宗商品历史K线数据"""

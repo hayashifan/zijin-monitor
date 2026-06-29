@@ -3,6 +3,7 @@
 """
 import json
 import asyncio
+import time
 from typing import Dict, Optional
 
 from core.cache import CacheManager
@@ -25,21 +26,23 @@ class StockService:
         return is_trading_hours('HK')
 
     def _get_cached(self, key: str) -> Optional[dict]:
-        # 交易时段 15s，非交易时段 300s
+        """获取缓存，交易时段 15s TTL，非交易时段 300s"""
         trading = self._is_trading_hours()
-        # 手动实现动态 TTL：先检查是否在缓存中且未过期
+        ttl = 15 if trading else 300
+        # 检查缓存是否存在且 TTL 正确
         if key in self._cache._store:
-            from datetime import datetime
-            import time
-            data, ts = self._cache._store[key]
-            ttl = 15 if trading else 300
-            if time.time() - ts < ttl:
+            data, ts, stored_ttl = self._cache._store[key]
+            # 如果 TTL 状态变化（交易→非交易或反之），强制刷新
+            if stored_ttl == ttl and time.time() - ts < ttl:
                 return data
+            # TTL 不匹配，删除旧缓存
             del self._cache._store[key]
         return None
 
     def _set_cache(self, key: str, data):
-        self._cache.set(key, data)
+        trading = self._is_trading_hours()
+        ttl = 15 if trading else 300
+        self._cache.set(key, data, ttl=ttl)
 
     def _safe_float(self, val: str, default: float = 0.0) -> float:
         return safe_float(val, default)
@@ -48,18 +51,17 @@ class StockService:
         return safe_int(val, default)
 
     def _get_sina(self, code: str) -> str:
-        """同步获取新浪数据"""
-        try:
-            session = get_session()
-            url = f"https://hq.sinajs.cn/list={code}"
-            resp = session.get(url, timeout=10)
-            resp.encoding = 'gbk'
-            if '="' not in resp.text:
-                return ''
-            return resp.text.split('="')[1].rstrip('";')
-        except Exception as e:
-            print(f"[stock] Sina API error for {code}: {e}")
+        """同步获取新浪数据（使用 core.http 统一客户端）"""
+        from core.http import get_sync
+        text = get_sync(
+            f"https://hq.sinajs.cn/list={code}",
+            timeout=10,
+            encoding='gbk',
+            max_retries=2,
+        )
+        if '="' not in text:
             return ''
+        return text.split('="')[1].rstrip('";')
 
     async def get_realtime_quote(self, stock_code: str) -> Optional[dict]:
         """获取A股实时行情"""
@@ -100,18 +102,18 @@ class StockService:
             volume = safe_int(parts[8])
             amount = safe_float(parts[9])
 
-            change = price - pre_close if pre_close > 0 else 0
-            change_pct = (change / pre_close * 100) if pre_close > 0 else 0
-
-            is_closed = not self._is_trading_hours()
-            change, change_pct = apply_grace_period(change, change_pct, is_closed, 'A')
-
-            # API返回price=0时用昨收兜底
+            # API返回price=0时用昨收兜底（先修正再算涨跌幅）
             if price == 0 and pre_close > 0:
                 price = pre_close
                 open_price = pre_close if open_price == 0 else open_price
                 high = pre_close if high == 0 else high
                 low = pre_close if low == 0 else low
+
+            change = price - pre_close if pre_close > 0 and price > 0 else 0
+            change_pct = (change / pre_close * 100) if pre_close > 0 and price > 0 else 0
+
+            is_closed = not self._is_trading_hours()
+            change, change_pct = apply_grace_period(change, change_pct, is_closed, 'A')
 
             result = {
                 'code': stock_code,

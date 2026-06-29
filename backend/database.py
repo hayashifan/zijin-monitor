@@ -26,6 +26,12 @@ from db_announcement import save_announcement
 # 基本面
 from db_fundamental import save_company_fundamental
 
+# 定期报告
+from db_report import (
+    save_report, save_reports_batch, get_reports,
+    get_report_detail, update_llm_summary, update_alert_flags,
+)
+
 __all__ = [
     'DATABASE_PATH', 'get_db', 'get_database', 'init_db',
     'save_stock_realtime', 'save_stock_history',
@@ -35,4 +41,6 @@ __all__ = [
     'save_announcement',
     'save_company_fundamental',
     'cleanup_anomalous_commodity_data',
+    'save_report', 'save_reports_batch', 'get_reports',
+    'get_report_detail', 'update_llm_summary', 'update_alert_flags',
 ]

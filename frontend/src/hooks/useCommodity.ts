@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { commodityAPI } from '../services/api';
-import type { CommodityOverview, GoldVolatility } from '../types';
+import type { CommodityPrice, CommodityOverview, GoldVolatility } from '../types';
 
 export function useCommodityOverview() {
   return useQuery({
@@ -8,8 +8,21 @@ export function useCommodityOverview() {
     queryFn: async () => {
       const res = await commodityAPI.getOverview();
       if (res.data?.success) return res.data.data as CommodityOverview;
-      return null;
+      throw new Error(res.data?.message || 'Failed to fetch commodity overview');
     },
+    staleTime: 15000,
+  });
+}
+
+export function useCommodityHistory(type: string, days: number = 30) {
+  return useQuery({
+    queryKey: ['commodity', 'history', type, days],
+    queryFn: async () => {
+      const res = await commodityAPI.getHistory(type, days);
+      if (res.data?.success) return res.data.data;
+      throw new Error(res.data?.message || 'Failed to fetch commodity history');
+    },
+    staleTime: 60000,
   });
 }
 
@@ -19,20 +32,8 @@ export function useGoldVolatility() {
     queryFn: async () => {
       const res = await commodityAPI.getGoldVolatility();
       if (res.data?.success) return res.data.data as GoldVolatility;
-      return null;
+      throw new Error(res.data?.message || 'Failed to fetch gold volatility');
     },
-    refetchInterval: 60000, // 波动率 60s 刷新一次
-  });
-}
-
-export function useCommodityHistory(type: string, days: number = 30) {
-  return useQuery({
-    queryKey: ['commodity', 'history', type, days],
-    queryFn: async () => {
-      const res = await commodityAPI.getHistory(type, days);
-      if (res.data?.success) return res.data.data ?? [];
-      return [];
-    },
-    staleTime: 60000, // 历史数据 60s 内不重新请求
+    staleTime: 60000,
   });
 }

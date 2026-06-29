@@ -8,7 +8,7 @@ export function useAnnouncements(code: string = '601899') {
     queryFn: async () => {
       const res = await announcementAPI.getList(code, 'cninfo', 1, 10);
       if (res.data?.success) return (Array.isArray(res.data.data) ? res.data.data : []) as Announcement[];
-      return [];
+      throw new Error(res.data?.message || '公告数据获取失败');
     },
   });
 }

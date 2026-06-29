@@ -13,8 +13,12 @@ from typing import List, Dict
 
 from services.stock_service import stock_service
 from services.commodity_service import commodity_service
+from core.cache import CacheManager
 
 QUANT_DATA_DIR = Path.home() / "zijin-quant" / "data"
+
+# 关联性分析缓存（计算密集，缓存 5 分钟）
+_corr_cache = CacheManager(max_size=20, default_ttl=300)
 
 
 def _pearsonr(x: List[float], y: List[float]) -> tuple:
@@ -84,6 +88,11 @@ class CorrelationService:
         self, commodity_types: List[str], days: int = 60
     ) -> Dict:
         """计算股价与各商品的关联性"""
+        cache_key = f"commodity_{'_'.join(sorted(commodity_types))}_{days}"
+        cached = _corr_cache.get(cache_key)
+        if cached:
+            return cached
+
         # 并行获取股价K线 + 各商品K线
         stock_coro = stock_service.get_stock_history("601899", "A", days)
         comm_coros = {t: commodity_service.get_history(t, days) for t in commodity_types}
@@ -133,10 +142,17 @@ class CorrelationService:
                 "rolling_correlation": rolling,
             }
 
+        if result:
+            _corr_cache.set(cache_key, result)
         return result
 
     async def get_quant_correlation(self, days: int = 90) -> Dict:
         """从 zijin-quant CSV 计算量化因子与股价的关联性"""
+        cache_key = f"quant_{days}"
+        cached = _corr_cache.get(cache_key)
+        if cached:
+            return cached
+
         stock_file = QUANT_DATA_DIR / "stock_price.csv"
         factor_file = QUANT_DATA_DIR / "synthetic_factors.csv"
         report_files = sorted(QUANT_DATA_DIR.glob("report_*.json"), reverse=True)
@@ -231,13 +247,15 @@ class CorrelationService:
                 entry["factors"] = factor_data[r["date"]]
             daily_signals.append(entry)
 
-        return {
+        result = {
             "factor_correlations": factor_correlations,
             "backtest_summary": backtest_summary,
             "data_points": len(stock_rows),
             "stock_normalized": [round(v, 4) for v in stock_norm],
             "daily_signals": daily_signals,
         }
+        _corr_cache.set(cache_key, result)
+        return result
 
 
 correlation_service = CorrelationService()

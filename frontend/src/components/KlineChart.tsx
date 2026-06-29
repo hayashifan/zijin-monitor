@@ -173,7 +173,7 @@ const KlineChart = React.memo(function KlineChart({ data, theme, period, indicat
           <button style={{...btnStyle, background: showMACD ? '#3b82f620' : 'transparent', borderColor: showMACD ? '#3b82f6' : (isDark ? '#444' : '#ddd'), color: showMACD ? '#3b82f6' : (isDark ? '#aaa' : '#666')}} onClick={() => setShowMACD(v => !v)}>MACD</button>
           {!hasIndicators && <span style={{fontSize:'0.65rem',opacity:0.4,marginLeft:'0.5rem'}}>MA20/MA60/BB/RSI/MACD 需后端指标数据</span>}
         </div>
-        <ReactECharts key={`${period}-${showBB}-${showRSI}-${showMACD}`} option={option} style={{height: (showRSI || showMACD) ? ((showRSI && showMACD) ? 480 : 420) : 360}} notMerge={true} />
+        <ReactECharts key={`${period}-${showBB}-${showRSI}-${showMACD}`} option={option} style={{height: (showRSI || showMACD) ? ((showRSI && showMACD) ? 420 : 360) : 300}} notMerge={true} />
       </div>
     </div>
   );

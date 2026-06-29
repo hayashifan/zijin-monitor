@@ -13,8 +13,9 @@ export function useStockOverview() {
     queryFn: async () => {
       const res = await stockAPI.getOverview();
       if (res.data?.success) return res.data.data as StockOverview;
-      return null;
+      throw new Error(res.data?.message || '股票数据获取失败');
     },
+    refetchInterval: 15000, // 行情独立轮询
   });
 }
 
@@ -24,7 +25,7 @@ export function useStockHistory(code: string = '601899', market: string = 'A', d
     queryFn: async () => {
       const res = await stockAPI.getHistory(code, market, days);
       if (res.data?.success) return res.data.data ?? [];
-      return [];
+      throw new Error(res.data?.message || 'K线数据获取失败');
     },
   });
 }
