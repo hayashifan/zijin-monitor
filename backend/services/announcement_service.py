@@ -1,40 +1,27 @@
 """
 公告爬虫服务 - 东方财富 + 缓存
 """
-import requests
 import asyncio
 from datetime import datetime
 from typing import List, Dict, Optional
 import time
+
+from core.http import get_session
+from core.cache import CacheManager
 
 
 class AnnouncementService:
     """公告爬虫服务"""
 
     def __init__(self):
-        self.session = requests.Session()
-        self.session.trust_env = False
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json',
-        })
-        self._cache: Dict[str, tuple] = {}
-        self._cache_ttl = 600  # 10分钟缓存
+        self.session = get_session()
+        self._cache = CacheManager(max_size=50, default_ttl=600)
 
     def _get_cached(self, key: str) -> Optional[list]:
-        if key in self._cache:
-            data, ts = self._cache[key]
-            if time.time() - ts < self._cache_ttl:
-                return data
-        return None
+        return self._cache.get(key)
 
     def _set_cache(self, key: str, data: list):
-        self._cache[key] = (data, time.time())
-        if len(self._cache) > 50:
-            now = time.time()
-            expired = [k for k, (_, ts) in self._cache.items() if now - ts > self._cache_ttl * 2]
-            for k in expired:
-                del self._cache[k]
+        self._cache.set(key, data)
 
     async def get_eastmoney_announcements(self, stock_code: str, page: int = 1, size: int = 20) -> List[Dict]:
         """从东方财富获取公告"""
@@ -58,7 +45,6 @@ class AnnouncementService:
             }
 
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'application/json, text/plain, */*',
                 'Referer': f'https://data.eastmoney.com/notices/detail/{stock_code}.html',
             }
@@ -99,9 +85,6 @@ class AnnouncementService:
 
             return announcements
 
-        except requests.exceptions.RequestException as e:
-            print(f"[announcement] Network error: {e}")
-            return []
         except Exception as e:
             print(f"[announcement] Error fetching eastmoney announcements: {e}")
             return []
@@ -113,6 +96,54 @@ class AnnouncementService:
     async def get_hkex_announcements(self, stock_code: str) -> List[Dict]:
         """从港交所获取H股公告（简化实现）"""
         return []
+
+    async def get_announcement_detail(self, art_code: str) -> Optional[Dict]:
+        """获取公告详情（正文+PDF链接）"""
+        cache_key = f'ann_detail_{art_code}'
+        cached = self._get_cached(cache_key)
+        if cached:
+            return cached
+
+        try:
+            url = "https://np-cnotice-stock.eastmoney.com/api/content/ann"
+            params = {
+                'art_code': art_code,
+                'client_source': 'web',
+                'f_node': '0',
+                's_node': '0',
+            }
+            headers = {
+                'Accept': 'application/json',
+                'Referer': 'https://data.eastmoney.com/',
+            }
+
+            response = await asyncio.to_thread(self.session.get, url, params=params, headers=headers, timeout=15)
+            response.raise_for_status()
+            result = response.json()
+
+            if not result.get('success'):
+                return None
+
+            data = result.get('data', {})
+            if not data:
+                return None
+
+            detail = {
+                'id': art_code,
+                'title': data.get('notice_title', ''),
+                'content': data.get('notice_content', ''),
+                'publish_date': (data.get('notice_date', '') or '')[:10],
+                'pdf_url': data.get('attach_url_web') or data.get('attach_url', ''),
+                'page_count': data.get('page_size', 0),
+                'source': '东方财富',
+            }
+
+            self._set_cache(cache_key, detail)
+            return detail
+
+        except Exception as e:
+            print(f"[announcement] Failed to get detail for {art_code}: {e}")
+            return None
 
 
 announcement_service = AnnouncementService()

@@ -21,6 +21,10 @@ CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "300"))
 STOCK_CODES = os.getenv("STOCK_CODES", "A:601899,HK:02899")
 BYPASS_SYSTEM_PROXY = os.getenv("BYPASS_SYSTEM_PROXY", "true").lower() == "true"
 
+# ── MiMo API（财报 LLM 摘要用）──
+MIMO_API_KEY = os.getenv("MIMO_API_KEY", "")
+MIMO_BASE_URL = os.getenv("MIMO_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1")
+
 # ── 可选：绕过系统代理 ──────────────────────────────
 if BYPASS_SYSTEM_PROXY:
     import requests

@@ -84,70 +84,48 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
         <span className="list-date">{fmtTime(data.timestamp)}</span>
       </div>
       <div className="card-body">
-        <Row gutter={[12,12]}>
-          {/* ── 操作建议 ── */}
+        <Row gutter={[10,10]}>
+          {/* ── 操作建议 + 核心指标（合并一行）── */}
           <Col span={24}>
-            <div className="quant-signal-box">
-              <div style={{fontSize: '1.8rem', lineHeight: 1, opacity: 0.8}}>{signalIcon}</div>
-              <div style={{flex: 1}}>
-                <div style={{fontSize: '1.1rem', fontWeight: 700, color: signalColor, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums'}}>
-                  信号：{signal}
-                </div>
-                <div style={{fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 2}}>
-                  置信度 {confidence} · 建议 {holdText} · {position}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'stretch' }}>
+              {/* 信号 */}
+              <div className="quant-signal-box" style={{ flex: 1, minWidth: 0 }}>
+                <div style={{fontSize: '1.5rem', lineHeight: 1, opacity: 0.8}}>{signalIcon}</div>
+                <div style={{flex: 1, minWidth: 0}}>
+                  <div style={{fontSize: '1rem', fontWeight: 700, color: signalColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                    {signal}
+                  </div>
+                  <div style={{fontSize: '0.6875rem', color: 'var(--text-tertiary)', marginTop: 1}}>
+                    置信{confidence} · {holdText} · {position}
+                  </div>
                 </div>
               </div>
-              <div style={{
-                color: confColor,
-                padding: '4px 10px',
-                borderRadius: 6,
-                border: `1px solid ${confColor}30`,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                fontFamily: 'var(--font-mono)',
-              }}>
-                置信 {confidence}
+              {/* 指标 */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                <div className="metric-card metric-card--highlight" style={{ padding: '0.5rem 0.75rem', textAlign: 'center' }}>
+                  <div className="metric-label" style={{ fontSize: '0.625rem' }}>夏普</div>
+                  <div className="metric-value" style={{ fontSize: '1rem', color: bt.sharpe_ratio > 1.5 ? 'var(--accent)' : bt.sharpe_ratio > 1.1 ? UP : NEUTRAL }}>{bt.sharpe_ratio.toFixed(2)}</div>
+                </div>
+                <div className="metric-card" style={{ padding: '0.5rem 0.75rem', textAlign: 'center' }}>
+                  <div className="metric-label" style={{ fontSize: '0.625rem' }}>年化</div>
+                  <div className="metric-value" style={{ fontSize: '1rem', color: bt.strategy_annual_return > 0 ? UP : DOWN }}>{fmtPct(bt.strategy_annual_return)}</div>
+                </div>
+                <div className="metric-card" style={{ padding: '0.5rem 0.75rem', textAlign: 'center' }}>
+                  <div className="metric-label" style={{ fontSize: '0.625rem' }}>回撤</div>
+                  <div className="metric-value" style={{ fontSize: '1rem', color: DOWN }}>{fmtPct(bt.max_drawdown)}</div>
+                </div>
+                <div className="metric-card" style={{ padding: '0.5rem 0.75rem', textAlign: 'center' }}>
+                  <div className="metric-label" style={{ fontSize: '0.625rem' }}>胜率</div>
+                  <div className="metric-value" style={{ fontSize: '0.875rem' }}>{fmtPct(bt.win_rate)}</div>
+                </div>
               </div>
             </div>
-            {/* Confidence meter */}
-            <div className="confidence-meter-track">
+            <div className="confidence-meter-track" style={{ marginTop: '0.375rem' }}>
               <div className="confidence-meter-fill" style={{ width: `${confPct}%`, background: confColor }} />
             </div>
           </Col>
 
-          {/* ── 核心指标 ── */}
-          <Col span={6}>
-            <div className="metric-card metric-card--highlight">
-              <div className="metric-label">夏普比率</div>
-              <div className="metric-value metric-value--lg" style={{color: bt.sharpe_ratio > 1.5 ? 'var(--accent)' : bt.sharpe_ratio > 1.1 ? UP : NEUTRAL}}>
-                {bt.sharpe_ratio.toFixed(2)}
-              </div>
-            </div>
-          </Col>
-          <Col span={6}>
-            <div className="metric-card">
-              <div className="metric-label">年化收益</div>
-              <div className="metric-value" style={{color: bt.strategy_annual_return > 0 ? UP : DOWN}}>
-                {fmtPct(bt.strategy_annual_return)}
-              </div>
-            </div>
-          </Col>
-          <Col span={6}>
-            <div className="metric-card">
-              <div className="metric-label">最大回撤</div>
-              <div className="metric-value" style={{color: DOWN}}>{fmtPct(bt.max_drawdown)}</div>
-            </div>
-          </Col>
-          <Col span={6}>
-            <div className="metric-card">
-              <div className="metric-label">胜率/盈亏比</div>
-              <div className="metric-value" style={{fontSize:'0.9rem'}}>
-                {fmtPct(bt.win_rate)} / {bt.profit_loss_ratio.toFixed(2)}
-              </div>
-            </div>
-          </Col>
-
-          {/* ── 验证清单 — clean dots ── */}
+          {/* ── 验证清单 + 风险提示（合并一行）── */}
           <Col span={24}>
             <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
               {Object.entries(checks).map(([k, v]) => (

@@ -74,12 +74,14 @@ def mock_profit_df():
 
 def _run(coro):
     """辅助：在测试中运行 async 函数"""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 @pytest.fixture(autouse=True)
 def _clean_disk_cache():
-    """每个测试前清除磁盘缓存，确保测试间无污染"""
+    """每个测试前清除磁盘缓存 + 重置全局 Semaphore，确保测试间无污染"""
+    import services.fundamental_service as _fs
+    _fs._AKSHARE_SEMAPHORE = None  # 重置 Semaphore，避免跨 event loop 绑定
     cache_dir = _FUND_CACHE_DIR
     if os.path.exists(cache_dir):
         shutil.rmtree(cache_dir)
@@ -141,7 +143,7 @@ class TestGetOverviewHandlesPartialFailure:
     def test_metrics_fails_others_succeed(self, svc, mock_financial_df, mock_profit_df):
         """get_key_metrics 抛异常，但 financial_summary 和 profit_trend 正常"""
         with patch('services.fundamental_service.ak') as mock_ak, \
-             patch.object(FundamentalService, '_fetch_sina_price', return_value=None):
+             patch.object(FundamentalService, '_fetch_sina_realtime', return_value=None):
             mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("API down"))
             mock_ak.stock_financial_abstract_ths = MagicMock(return_value=mock_financial_df)
             mock_ak.stock_profit_sheet_by_report_em = MagicMock(return_value=mock_profit_df)
@@ -259,7 +261,7 @@ class TestDiskCacheFallback:
         svc._memory_cache.clear()
 
         with patch('services.fundamental_service.ak') as mock_ak, \
-             patch.object(FundamentalService, '_fetch_sina_price', return_value=None):
+             patch.object(FundamentalService, '_fetch_sina_realtime', return_value=None):
             mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("API down"))
             second_result = _run(svc.get_key_metrics('601899'))
 
@@ -276,7 +278,7 @@ class TestGetOverviewAllSourcesFail:
     def test_all_fail_returns_empty(self, svc):
         """全部 3 个数据源失败，应返回非 None 的空 overview"""
         with patch('services.fundamental_service.ak') as mock_ak, \
-             patch.object(FundamentalService, '_fetch_sina_price', return_value=None):
+             patch.object(FundamentalService, '_fetch_sina_realtime', return_value=None):
             mock_ak.stock_financial_abstract_ths = MagicMock(side_effect=Exception("fail1"))
             mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("fail2"))
             mock_ak.stock_profit_sheet_by_report_em = MagicMock(side_effect=Exception("fail3"))
@@ -406,7 +408,7 @@ class TestOverviewFromCacheFlag:
         svc._memory_cache.clear()
 
         with patch('services.fundamental_service.ak') as mock_ak, \
-             patch.object(FundamentalService, '_fetch_sina_price', return_value=None):
+             patch.object(FundamentalService, '_fetch_sina_realtime', return_value=None):
             mock_ak.stock_financial_abstract_ths = MagicMock(side_effect=Exception("down"))
             mock_ak.stock_zh_a_spot_em = MagicMock(side_effect=Exception("down"))
             mock_ak.stock_profit_sheet_by_report_em = MagicMock(side_effect=Exception("down"))

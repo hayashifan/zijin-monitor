@@ -68,6 +68,11 @@ const CommodityCard = React.memo(function CommodityCard({ data, type, loading }:
         <div className="commodity-change-row">
           <span className={`commodity-delta ${changeFlash ? 'value-flash' : ''}`} style={{color:dColor}}>{arrow} {zero?'0.00%':`${up?'+':''}${data.change_percent.toFixed(2)}%`}</span>
         </div>
+        {data.timestamp && (
+          <div style={{fontSize:'0.5625rem',color:'var(--text-tertiary)',marginTop:'0.25rem',fontFamily:'var(--font-mono)',fontVariantNumeric:'tabular-nums'}}>
+            {data.timestamp}
+          </div>
+        )}
       </div>
     </div>
   );

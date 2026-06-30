@@ -3,8 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 import config
-from database import init_db
-from routers import stock, commodity, announcement, fundamental, quant
+from database import init_db, get_db
+from core.db import get_database
+from routers import stock, commodity, announcement, fundamental, quant, correlation, technical_indicators, report, fundamental_score
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,11 +13,13 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
     # Shutdown
+    db = get_database()
+    await db.close()
 
 app = FastAPI(
     title="紫金单股监控器",
     description="紫金矿业(601899/02899)个股监控系统",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -35,6 +38,10 @@ app.include_router(commodity.router, prefix="/api/commodity", tags=["大宗商�
 app.include_router(announcement.router, prefix="/api/announcement", tags=["公告"])
 app.include_router(fundamental.router, prefix="/api/fundamental", tags=["基本面"])
 app.include_router(quant.router, prefix="/api/quant", tags=["量化分析"])
+app.include_router(correlation.router, prefix="/api/correlation", tags=["关联性分析"])
+app.include_router(technical_indicators.router, prefix="/api/technical", tags=["技术指标"])
+app.include_router(report.router, prefix="/api/report", tags=["定期报告"])
+app.include_router(fundamental_score.router, prefix="/api/fundamental-score", tags=["基本面评分"])
 
 @app.get("/")
 async def root():
