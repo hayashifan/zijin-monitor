@@ -4,16 +4,16 @@
 
 紫金矿业(601899/02899)个股监控系统。提供 A 股/H 股实时行情、大宗商品价格（黄金/铜）、公司公告、基本面估值、量化因子分析、股价与商品/量化关联性分析的可视化看板。
 
-- **前端**：`frontend/` — React 18 + TypeScript + Vite + Ant Design 5 + ECharts
+- **前端**：`frontend/` — React 19 + TypeScript + Vite 8 + Ant Design 6 + ECharts
 - **后端**：`backend/` — Python 3.11 + FastAPI + uvicorn + aiosqlite
-- **数据库**：`data/zijin_monitor.db` — SQLite，6 张表
+- **数据库**：`data/zijin_monitor.db` — SQLite，16 张表
 - **PM2**：`ecosystem.config.cjs` — zijin-web(5174) + zijin-server(3002)
 
 ## 架构
 
 ```
 backend/
-├── main.py                  # FastAPI 入口，注册 6 个路由
+├── main.py                  # FastAPI 入口，注册 13 个路由
 ├── config.py                # 环境变量配置
 ├── database.py              # DB facade（re-export 子模块）
 ├── db_base.py               # DB 路径 + init_db（建表 + 索引）
@@ -21,27 +21,49 @@ backend/
 ├── db_commodity.py           # commodity_price / commodity_history CRUD
 ├── db_announcement.py        # announcement CRUD
 ├── db_fundamental.py         # company_fundamental CRUD
+├── db_business.py            # 业务动向表 CRUD
+├── db_events.py              # 事件系统表 CRUD
+├── db_mine_detail.py         # 矿山详情表 CRUD
+├── core/                    # 核心基础设施
+│   ├── circuit_breaker.py       # 熔断器
+│   └── http.py                  # HTTP 客户端
 ├── services/                # 服务层：数据获取 + 缓存 + 业务逻辑
 │   ├── stock_service.py         # 新浪 A 股/H 股行情
 │   ├── commodity_service.py     # 大宗商品（新浪 + 东方财富 + 新浪全球期货）
 │   ├── announcement_service.py  # 公告（东方财富 API）
 │   ├── fundamental_service.py   # 基本面（akshare + 磁盘缓存）
-│   └── correlation_service.py   # 关联性分析（Pearson + 归一化 + 滚动相关）
+│   ├── fundamental_score_service.py # 基本面评分（4维度加权）
+│   ├── correlation_service.py   # 关联性分析（Pearson + 归一化 + 滚动相关）
+│   ├── report_service.py        # 定期报告（年报解析）
+│   ├── business_service.py      # 业务动向
+│   ├── event_service.py         # 事件系统
+│   ├── event_impact_service.py  # 事件影响分析
+│   ├── analyst_service.py       # 券商研报
+│   ├── report_parser.py         # 报告解析（LLM）
+│   ├── social_sentiment_service.py # 社交舆情
+│   └── stock_registry.py        # 股票注册表
 ├── routers/                 # 路由层：HTTP 契约 + 参数校验
 │   ├── stock.py                 # /api/stock/*
 │   ├── commodity.py             # /api/commodity/*
 │   ├── announcement.py          # /api/announcement/*
 │   ├── fundamental.py           # /api/fundamental/*
 │   ├── quant.py                 # /api/quant/*（读 zijin-quant 报告 JSON）
-│   └── correlation.py           # /api/correlation/*
-└── test_*.py                # 94 个单元测试
+│   ├── correlation.py           # /api/correlation/*
+│   ├── technical_indicators.py  # /api/technical/*
+│   ├── report.py                # /api/report/*
+│   ├── fundamental_score.py     # /api/fundamental-score/*
+│   ├── business.py              # /api/business/*
+│   ├── mining.py                # /api/mining/*
+│   ├── events.py                # /api/events/*
+│   └── analyst.py               # /api/analyst/*
+└── test_*.py                # 220 个单元测试
 
 frontend/src/
 ├── App.tsx                  # 主页面（219行，10 个 state，15s 轮询）
 ├── App.css                  # 全局样式 + CSS 变量主题系统
 ├── types/index.ts           # TypeScript 类型定义
 ├── services/api.ts          # Axios API 层（按模块分组）
-└── components/              # 8 个独立组件
+└── components/              # 22 个独立组件
     ├── StockCard.tsx            # A 股/H 股行情卡片
     ├── CommodityCard.tsx        # 商品价格卡片（含更新时间戳）
     ├── CommodityHistoryChart.tsx # 商品历史K线图
@@ -99,7 +121,7 @@ cd backend
 
 ## 前端约定
 
-- Ant Design 5 布局 + 自定义 CSS 变量主题系统（暗色/亮色）。
+- Ant Design 6 布局 + 自定义 CSS 变量主题系统（暗色/亮色）。
 - 组件独立文件，`React.memo` 优化，`useValueFlash` 价格闪烁 hook。
 - **颜色规则**：中国市场惯例 — 红色（`#ff4d4f`）上涨，绿色（`#52c41a`）下跌。
 - 15s 轮询 + Page Visibility API（切标签页暂停/恢复）。
@@ -115,6 +137,10 @@ cd backend
 | commodity_history | db_commodity | 商品历史K线（UPSERT by type+date） |
 | announcement | db_announcement | 公告列表（INSERT IGNORE by code+url） |
 | company_fundamental | db_fundamental | 基本面财务数据（UPSERT by code+date） |
+| annual_report | db_base | 定期报告（年报解析结果） |
+| business_* | db_business | 业务动向相关表 |
+| event_* | db_events | 事件系统相关表 |
+| mine_* | db_mine_detail | 矿山详情相关表 |
 
 ## 测试
 
@@ -153,7 +179,7 @@ cd frontend && npm run build
 
 ### 质量门禁
 
-- pytest 全量通过（不允许有 failed）
+- pytest 全量通过（220/220，不允许有 failed）
 - 前端 build 成功
 - **CI 红了不允许合并**
 
