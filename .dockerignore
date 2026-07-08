@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# 依赖目录
+node_modules
+venv
+__pycache__
+*.pyc
+*.pyo
+
+# 构建产物
+frontend/dist
+frontend/build
+*.egg-info
+
+# 数据文件（运行时生成）
+data/*.db
+data/*.db-journal
+
+# 环境文件
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# 测试
+.pytest_cache
+.coverage
+htmlcov
+
+# 日志
+*.log
+logs/
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 文档
+*.md
+LICENSE

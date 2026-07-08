@@ -1,14 +1,16 @@
 import logging
 from fastapi import APIRouter, HTTPException, Query
 from services.stock_service import stock_service
+from services.stock_registry import StockRegistry
 from database import save_stock_realtime
+import config
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 @router.get("/realtime")
-async def get_stock_realtime(code: str = "601899", market: str = "A"):
+async def get_stock_realtime(code: str = config.DEFAULT_STOCK, market: str = "A"):
     """获取实时行情"""
     try:
         if market.upper() == "HK":
@@ -25,7 +27,7 @@ async def get_stock_realtime(code: str = "601899", market: str = "A"):
 
 @router.get("/history")
 async def get_stock_history(
-    code: str = Query("601899"),
+    code: str = Query(config.DEFAULT_STOCK),
     market: str = Query("A"),
     days: int = Query(30, ge=1, le=365),
 ):
@@ -40,11 +42,15 @@ async def get_stock_history(
         raise HTTPException(status_code=500, detail="服务内部错误")
 
 @router.get("/overview")
-async def get_stock_overview():
+async def get_stock_overview(code: str = Query(config.DEFAULT_STOCK)):
     """获取A股+H股概览"""
     try:
-        a_quote = await stock_service.get_realtime_quote("601899")
-        hk_quote = await stock_service.get_hk_quote("02899")
+        stock_config = StockRegistry.get_or_default(code)
+        a_quote = await stock_service.get_realtime_quote(code)
+        if stock_config.hk_code:
+            hk_quote = await stock_service.get_hk_quote(stock_config.hk_code)
+        else:
+            hk_quote = None
         if a_quote:
             await save_stock_realtime(a_quote)
         if hk_quote:

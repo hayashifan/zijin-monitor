@@ -2,13 +2,14 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from services.fundamental_service import fundamental_service
+import config
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 @router.get("/overview")
-async def get_fundamental_overview(code: str = "601899"):
+async def get_fundamental_overview(code: str = config.DEFAULT_STOCK):
     """获取基本面概览（指标+财务摘要+盈利趋势）"""
     try:
         overview = await fundamental_service.get_overview(code)
@@ -23,7 +24,7 @@ async def get_fundamental_overview(code: str = "601899"):
 
 
 @router.get("/summary")
-async def get_financial_summary(code: str = "601899"):
+async def get_financial_summary(code: str = config.DEFAULT_STOCK):
     try:
         summary = await fundamental_service.get_financial_summary(code)
         if summary:
@@ -35,7 +36,7 @@ async def get_financial_summary(code: str = "601899"):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/metrics")
-async def get_key_metrics(code: str = "601899"):
+async def get_key_metrics(code: str = config.DEFAULT_STOCK):
     try:
         metrics = await fundamental_service.get_key_metrics(code)
         if metrics:
@@ -48,7 +49,7 @@ async def get_key_metrics(code: str = "601899"):
 
 @router.get("/profit-trend")
 async def get_profit_trend(
-    code: str = "601899",
+    code: str = config.DEFAULT_STOCK,
     periods: int = Query(8, ge=1, le=20)
 ):
     try:

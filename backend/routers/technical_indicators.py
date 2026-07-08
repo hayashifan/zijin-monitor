@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 from services.stock_service import stock_service
 from services.technical_indicators_service import technical_indicators_service
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ router = APIRouter()
 
 @router.get("/indicators")
 async def get_indicators(
-    code: str = Query("601899", description="股票代码"),
+    code: str = Query(config.DEFAULT_STOCK, description="股票代码"),
     market: str = Query("A", description="市场: A/HK"),
     days: int = Query(120, ge=30, le=365, description="K线天数"),
 ):

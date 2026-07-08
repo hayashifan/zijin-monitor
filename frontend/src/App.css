@@ -808,3 +808,121 @@ h1, h2, h3, h4, h5, h6, .stock-name, .commodity-title, .nav-title, .hero-heading
   box-shadow: 0 4px 20px rgba(218, 165, 32, 0.15);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   移动端适配 (v3.0)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 手机竖屏 (< 480px) */
+@media (max-width: 30rem) {
+  .container { padding: 0.75rem; }
+  .hero { padding: 1.5rem 1rem; min-height: auto; }
+  .hero-heading { font-size: 1.25rem; line-height: 1.3; }
+  .hero-sub { font-size: 0.75rem; }
+  .card { padding: 0.75rem; }
+  .card-head { padding: 0.5rem 0.75rem; }
+  .card-body { padding: 0.5rem 0.75rem; }
+  .section-label { font-size: 0.75rem; margin: 1rem 0 0.5rem; }
+  
+  /* 触控友好：最小点击区域 44px */
+  .btn { min-height: 44px; min-width: 44px; }
+  .nav-tabs .btn { min-height: 40px; }
+  
+  /* 价格字体缩小 */
+  .price-value { font-size: 1.5rem; }
+  .commodity-value { font-size: 1rem; }
+  
+  /* 数据网格改为单列 */
+  .data-grid { grid-template-columns: 1fr; gap: 4px; }
+  
+  /* 公告列表 */
+  .announcement-item { padding: 0.5rem 0; }
+  .announcement-title { font-size: 0.8125rem; }
+}
+
+/* iPhone 安全区域（刘海屏/底部横条） */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .content {
+    padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom));
+  }
+}
+
+/* 移动端底部导航栏 */
+@media (max-width: 48rem) {
+  .nav-tabs {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border);
+    justify-content: space-around;
+    padding: 0.5rem 0;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 100;
+    gap: 0;
+  }
+  
+  .nav-tabs .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+  }
+  
+  .nav-tabs .btn.btn-primary {
+    color: var(--accent);
+  }
+  
+  /* 内容区域底部留空给导航栏 */
+  .content {
+    padding-bottom: 4rem;
+  }
+  
+  /* 隐藏顶部导航的品牌和刷新按钮 */
+  .nav-brand { display: none; }
+  .nav-right { display: none; }
+  .nav-inner { justify-content: center; }
+}
+
+/* 横屏适配 */
+@media (max-width: 48rem) and (orientation: landscape) {
+  .hero { padding: 1rem; }
+  .hero-heading { font-size: 1rem; }
+}
+
+/* 超小屏幕 (< 320px) */
+@media (max-width: 20rem) {
+  .container { padding: 0.5rem; }
+  .hero { padding: 1rem 0.75rem; }
+  .hero-heading { font-size: 1rem; }
+  .card { padding: 0.5rem; border-radius: 8px; }
+  .btn { min-height: 40px; font-size: 0.75rem; }
+}
+
+/* 暗色模式下的触控反馈 */
+@media (hover: none) and (pointer: coarse) {
+  .card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+  
+  .btn:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .nav, .nav-tabs, .theme-switch, .btn { display: none !important; }
+  .content { padding: 0; }
+  .card { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+}

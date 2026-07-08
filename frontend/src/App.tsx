@@ -12,6 +12,9 @@ import { useFundamentalScore } from './hooks/useFundamentalScore';
 import { useQuantReport } from './hooks/useQuant';
 import { useTechnicalIndicators } from './hooks/useTechnical';
 import { useReportList, useQuarterlyComparison, useReportAlerts } from './hooks/useReport';
+import { useMines, useProduction, useSegmentFinance, useESG } from './hooks/useBusiness';
+import { useEvents } from './hooks/useEvents';
+import { useAnalystReports } from './hooks/useAnalyst';
 import { KlineItem } from './components/KlineChart';
 import { fmtTime } from './components/constants';
 import KlineChart from './components/KlineChart';
@@ -27,6 +30,12 @@ import GoldVolatilityCard from './components/GoldVolatilityCard';
 import GoldHoverCard from './components/GoldHoverCard';
 import QuarterlyComparison from './components/QuarterlyComparison';
 import ReportTimeline from './components/ReportTimeline';
+import MineMap from './components/MineMap';
+import ProductionCard from './components/ProductionCard';
+import SegmentFinanceCard from './components/SegmentFinance';
+import ESGDashboard from './components/ESGDashboard';
+import EventStream from './components/EventStream';
+import AnalystCard from './components/AnalystCard';
 import './App.css';
 
 const SunSvg = () => <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>;
@@ -38,6 +47,7 @@ function App() {
     const t = localStorage.getItem('theme');
     return t === 'light' || t === 'dark' ? t : 'dark';
   });
+  const [page, setPage] = useState<'market' | 'business'>('market');
   const [klinePeriod, setKlinePeriod] = useState<number>(30);
   const [flashA, setFlashA] = useState(false);
   const [flashHK, setFlashHK] = useState(false);
@@ -60,6 +70,14 @@ function App() {
   const quarterlyQuery = useQuarterlyComparison('601899', 8);
   const reportAlertsQuery = useReportAlerts('601899');
 
+  // ── 业务动向数据 (v2.5) ──
+  const minesQuery = useMines();
+  const productionQuery = useProduction();
+  const segmentFinanceQuery = useSegmentFinance();
+  const esgQuery = useESG();
+  const eventsQuery = useEvents('601899', 30);
+  const analystQuery = useAnalystReports('601899', 90);
+
   // ── 提取数据 ──
   const stockData = stockQuery.data;
   const aShare = stockData?.a_share ?? null;
@@ -77,6 +95,14 @@ function App() {
   const reportList = reportListQuery.data ?? [];
   const quarterlyData = quarterlyQuery.data ?? [];
   const reportAlerts = reportAlertsQuery.data ?? [];
+
+  // ── 业务动向数据提取 (v2.5) ──
+  const mines = minesQuery.data ?? [];
+  const production = productionQuery.data ?? [];
+  const segmentFinance = segmentFinanceQuery.data ?? [];
+  const esgData = esgQuery.data ?? [];
+  const events = eventsQuery.data ?? [];
+  const analystReports = analystQuery.data ?? [];
 
   // ── Loading ──
   const isLoading = stockQuery.isLoading || commodityQuery.isLoading;
@@ -124,7 +150,9 @@ function App() {
     technicalQuery.refetch(); goldVolQuery.refetch();
     reportListQuery.refetch(); quarterlyQuery.refetch(); reportAlertsQuery.refetch();
     fundamentalScoreQuery.refetch();
-  }, [stockQuery, commodityQuery, announcementQuery, fundamentalQuery, klineQuery, quantQuery, technicalQuery, goldVolQuery, reportListQuery, quarterlyQuery, reportAlertsQuery, fundamentalScoreQuery]);
+    minesQuery.refetch(); productionQuery.refetch(); segmentFinanceQuery.refetch();
+    esgQuery.refetch(); eventsQuery.refetch(); analystQuery.refetch();
+  }, [stockQuery, commodityQuery, announcementQuery, fundamentalQuery, klineQuery, quantQuery, technicalQuery, goldVolQuery, reportListQuery, quarterlyQuery, reportAlertsQuery, fundamentalScoreQuery, minesQuery, productionQuery, segmentFinanceQuery, esgQuery, eventsQuery, analystQuery]);
 
   // ── 跳转到公司基本面 ──
   const scrollToCompany = useCallback(() => {
@@ -143,6 +171,22 @@ function App() {
             <img src="/logo.svg" alt="Logo" className="nav-logo-img" />
             <span className="nav-title">紫金矿业监控器</span>
           </a>
+          <div className="nav-tabs" style={{ display: 'flex', gap: '0.25rem', marginRight: 'auto', marginLeft: '1.5rem' }}>
+            <button
+              className={`btn ${page === 'market' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ padding: '4px 14px', fontSize: '0.8rem' }}
+              onClick={() => setPage('market')}
+            >
+              <LineChartOutlined /> 行情
+            </button>
+            <button
+              className={`btn ${page === 'business' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ padding: '4px 14px', fontSize: '0.8rem' }}
+              onClick={() => setPage('business')}
+            >
+              <FundOutlined /> 业务动向
+            </button>
+          </div>
           <div className="nav-right">
             <span className="nav-time">{fmtTime(lastUpdate)}</span>
             <button className="theme-switch" onClick={() => setTheme(t => t==='dark'?'light':'dark')} aria-label="切换主题">
@@ -157,11 +201,41 @@ function App() {
 
       <main className="content">
         <div className="container">
+
+        {page === 'business' ? (
+          /* ═══ 业务动向页 ═══ */
+          <>
+            <section className="hero" style={{ minHeight: 'auto', padding: '2rem 2.5rem', overflow: 'hidden' }}>
+              <h1 className="hero-heading" style={{ fontSize: '1.75rem' }}>业务动向</h1>
+              <p className="hero-sub" style={{ marginBottom: 0 }}>全球矿山 · 产量计划 · 板块财务 · ESG</p>
+            </section>
+
+            <Row gutter={[16,16]}>
+              <Col xs={24}>
+                <MineMap mines={mines} loading={minesQuery.isLoading} />
+              </Col>
+            </Row>
+            <Row gutter={[16,16]} style={{ marginTop: 16 }}>
+              <Col xs={24} lg={8}>
+                <ProductionCard data={production} loading={productionQuery.isLoading} />
+              </Col>
+              <Col xs={24} lg={16}>
+                <SegmentFinanceCard data={segmentFinance} loading={segmentFinanceQuery.isLoading} />
+              </Col>
+            </Row>
+            <Row gutter={[16,16]} style={{ marginTop: 16 }}>
+              <Col xs={24}>
+                <ESGDashboard data={esgData} loading={esgQuery.isLoading} />
+              </Col>
+            </Row>
+          </>
+        ) : (
+          /* ═══ 行情页 ═══ */
+          <>
           <section className="hero">
             <h1 className="hero-heading">紫金矿业<br/>实时行情监控</h1>
             <p className="hero-sub">A股 601899 · H股 02899 · 大宗商品 · 公告 · 基本面</p>
             <div className="hero-actions">
-              <button className="btn btn-primary" onClick={handleRefresh}><LineChartOutlined /> 查看行情</button>
               <button className="btn btn-ghost" onClick={scrollToCompany}><FundOutlined /> 基本面分析</button>
             </div>
           </section>
@@ -203,17 +277,15 @@ function App() {
             <CommodityHistoryChart theme={theme} />
           </details>
 
-          {/* ── 公司基本面与财报分析（合并大板块）── */}
+          {/* ── 公司基本面与财报分析 ── */}
           <div ref={companySectionRef} className="section-label">公司基本面与财报分析</div>
           <Row gutter={[16,16]}>
-            {/* 左列：评分 + 基本面 */}
             <Col xs={24} lg={8}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <FundamentalScoreCard data={fundamentalScore} loading={fundamentalScoreQuery.isLoading} />
                 <FundamentalCard data={metrics} loading={fundamentalQuery.isLoading} />
               </div>
             </Col>
-            {/* 右列：同比环比（含内联预警）+ 时间线 */}
             <Col xs={24} lg={16}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <QuarterlyComparison data={quarterlyData} alerts={reportAlerts} theme={theme} loading={quarterlyQuery.isLoading} />
@@ -222,19 +294,30 @@ function App() {
             </Col>
           </Row>
 
-          {/* ── 最新公告（折叠，底部）── */}
-          <div style={{ marginTop: '1rem' }}>
-            <AnnouncementCard data={showAnn} loading={announcementQuery.isLoading} />
-            {announcements.length > ANN_DEFAULT && (
-              <button
-                className="btn btn-outline"
-                style={{ width: '100%', marginTop: 8, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                onClick={() => setAnnExpanded(v => !v)}
-              >
-                {annExpanded ? <><UpOutlined /> 收起</> : <><DownOutlined /> 展开全部 {announcements.length} 条公告</>}
-              </button>
-            )}
-          </div>
+          {/* ── 事件流 + 券商研报 + 最新公告 ── */}
+          <Row gutter={[16,16]} style={{ marginTop: '1rem' }}>
+            <Col xs={24} lg={8}>
+              <EventStream data={events} loading={eventsQuery.isLoading} />
+            </Col>
+            <Col xs={24} lg={8}>
+              <AnalystCard data={analystReports} loading={analystQuery.isLoading} />
+            </Col>
+            <Col xs={24} lg={8}>
+              <AnnouncementCard data={showAnn} loading={announcementQuery.isLoading} />
+              {announcements.length > ANN_DEFAULT && (
+                <button
+                  className="btn btn-outline"
+                  style={{ width: '100%', marginTop: 8, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  onClick={() => setAnnExpanded(v => !v)}
+                >
+                  {annExpanded ? <><UpOutlined /> 收起</> : <><DownOutlined /> 展开全部 {announcements.length} 条公告</>}
+                </button>
+              )}
+            </Col>
+          </Row>
+          </>
+        )}
+
         </div>
       </main>
     </div>

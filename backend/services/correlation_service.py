@@ -14,6 +14,7 @@ from typing import List, Dict
 from services.stock_service import stock_service
 from services.commodity_service import commodity_service
 from core.cache import CacheManager
+import config
 
 QUANT_DATA_DIR = Path.home() / "zijin-quant" / "data"
 
@@ -94,7 +95,7 @@ class CorrelationService:
             return cached
 
         # 并行获取股价K线 + 各商品K线
-        stock_coro = stock_service.get_stock_history("601899", "A", days)
+        stock_coro = stock_service.get_stock_history(config.DEFAULT_STOCK, "A", days)
         comm_coros = {t: commodity_service.get_history(t, days) for t in commodity_types}
 
         # gather 所有协程

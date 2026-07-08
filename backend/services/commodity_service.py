@@ -5,11 +5,14 @@ Sina国际期货行情有限流，需要缓存降低请求频率
 import re
 import json as _json
 import asyncio
+import logging
 import numpy as np
 from typing import Optional
 
 from core.cache import TtlCacheManager
 from core.http import get_session, get_sync
+
+logger = logging.getLogger(__name__)
 
 
 class CommodityService:
@@ -64,7 +67,7 @@ class CommodityService:
                 'change_percent': round(change_pct, 2),
             }
         except Exception as e:
-            print(f"[commodity] EastMoney gold fallback failed: {e}")
+            logger.warning("commodity.eastmoney_gold_fallback_failed error=%s", e)
             return None
 
     def _get_eastmoney_copper_lme_sync(self) -> Optional[dict]:
@@ -89,7 +92,7 @@ class CommodityService:
                 'change_percent': round(change_pct, 2),
             }
         except Exception as e:
-            print(f"[commodity] EastMoney copper LME fallback failed: {e}")
+            logger.warning("commodity.eastmoney_copper_lme_fallback_failed error=%s", e)
             return None
 
     async def get_gold_price(self) -> Optional[dict]:
@@ -117,7 +120,7 @@ class CommodityService:
                     self._cache.set('gold', result)
                     return result
             except Exception as e:
-                print(f"[commodity] Gold parse error: {e}")
+                logger.warning("commodity.gold_parse_error error=%s", e)
         result = await asyncio.to_thread(self._get_eastmoney_gold_sync)
         if result:
             self._cache.set('gold', result)
@@ -148,7 +151,7 @@ class CommodityService:
                     self._cache.set('copper_lme', result)
                     return result
             except Exception as e:
-                print(f"[commodity] LME copper parse error: {e}")
+                logger.warning("commodity.lme_copper_parse_error error=%s", e)
         result = await asyncio.to_thread(self._get_eastmoney_copper_lme_sync)
         if result:
             self._cache.set('copper_lme', result)
@@ -192,7 +195,7 @@ class CommodityService:
                     self._cache.set('copper_shfe', result)
                     return result
             except Exception as e:
-                print(f"[commodity] SHFE copper parse error: {e}")
+                logger.warning("commodity.shfe_copper_parse_error error=%s", e)
         return None
 
     def _get_eastmoney_kline_sync(self, secid: str, days: int = 90) -> list:
@@ -225,7 +228,7 @@ class CommodityService:
                     })
             return result
         except Exception as e:
-            print(f"[commodity] EastMoney kline fetch failed for {secid}: {e}")
+            logger.warning("commodity.eastmoney_kline_failed secid=%s error=%s", secid, e)
             return []
 
     def _get_sina_shfe_kline_sync(self, symbol: str, days: int = 90) -> list:
@@ -251,7 +254,7 @@ class CommodityService:
                 })
             return result
         except Exception as e:
-            print(f"[commodity] Sina SHFE kline fetch failed for {symbol}: {e}")
+            logger.warning("commodity.sina_shfe_kline_failed symbol=%s error=%s", symbol, e)
             return []
 
     def _get_sina_global_kline_sync(self, symbol: str, days: int = 90) -> list:
@@ -277,7 +280,7 @@ class CommodityService:
                 })
             return result
         except Exception as e:
-            print(f"[commodity] Sina global kline fetch failed for {symbol}: {e}")
+            logger.warning("commodity.sina_global_kline_failed symbol=%s error=%s", symbol, e)
             return []
 
     @staticmethod
@@ -384,7 +387,7 @@ class CommodityService:
             self._cache.set(cache_key, result)
             return result
         except Exception as e:
-            print(f"[commodity] Gold volatility calc failed: {e}")
+            logger.warning("commodity.gold_volatility_calc_failed error=%s", e)
             return None
 
 

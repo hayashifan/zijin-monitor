@@ -3,10 +3,13 @@
 """
 import json
 import asyncio
+import logging
 import time
 from typing import Dict, Optional
 
 from core.cache import CacheManager
+
+logger = logging.getLogger(__name__)
 from core.http import get_session
 from core.utils import safe_float, safe_int, is_trading_hours, apply_grace_period
 
@@ -137,7 +140,7 @@ class StockService:
             self._set_cache(cache_key, result)
             return result
         except Exception as e:
-            print(f"[stock] Error fetching A-share {stock_code}: {e}")
+            logger.warning("stock.fetch_a_share_failed code=%s error=%s", stock_code, e)
             return None
 
     async def get_hk_quote(self, stock_code: str) -> Optional[dict]:
@@ -192,7 +195,7 @@ class StockService:
             self._set_cache(cache_key, result)
             return result
         except Exception as e:
-            print(f"[stock] Error fetching HK {stock_code}: {e}")
+            logger.warning("stock.fetch_hk_failed code=%s error=%s", stock_code, e)
             return None
 
     async def get_stock_history(self, stock_code: str, market: str = 'A', days: int = 30) -> list:
@@ -239,7 +242,7 @@ class StockService:
                 return history
             return []
         except Exception as e:
-            print(f"[stock] Error fetching history: {e}")
+            logger.warning("stock.fetch_history_failed error=%s", e)
             return []
 
 

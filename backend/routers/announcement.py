@@ -4,6 +4,7 @@ import aiosqlite
 from typing import Optional
 from services.announcement_service import announcement_service
 from database import save_announcement, get_db
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ router = APIRouter()
 
 @router.get("/list")
 async def get_announcements(
-    code: str = "601899",
+    code: str = config.DEFAULT_STOCK,
     source: str = "cninfo",
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),

@@ -3,9 +3,14 @@
 框架：赚钱能力 + 安全性 + 护城河与赛道
 """
 from typing import Dict, Optional, List
+import logging
 from core.utils import safe_float
 from core.cache import CacheManager
 from services.fundamental_service import fundamental_service
+from services.stock_registry import StockRegistry
+import config
+
+logger = logging.getLogger(__name__)
 
 # 模块级缓存（不要在方法内创建）
 _safety_cache = CacheManager(max_size=10, default_ttl=3600)
@@ -25,17 +30,7 @@ DEBT_RATIO_WARN = 70    # 资产负债率 > 70% 警戒
 CURRENT_RATIO_SAFE = 1.5  # 流动比率 > 1.5 安全
 INTEREST_COVERAGE_SAFE = 3  # 利息保障倍数 > 3 安全
 
-# 三、护城河（紫金矿业硬编码评估）
-ZIJIN_MOAT = {
-    'brand': True,          # 品牌：紫金是中国最大金铜矿企
-    'tech_patent': True,    # 技术：低品位矿开采技术领先
-    'cost_advantage': True, # 成本：全球最低开采成本之一
-    'resource_reserve': True, # 资源储备：全球化矿权布局
-}
-ZIJIN_SECTOR = {
-    'growth': True,         # 赛道：黄金+铜处于长期牛市早期
-    'ceiling': False,       # 天花板：资源有限但需求持续增长
-}
+
 
 
 class FundamentalScoreService:
@@ -86,7 +81,7 @@ class FundamentalScoreService:
                         break
 
         except Exception as e:
-            print(f"[score] Safety indicators failed: {e}")
+            logger.warning("fundamental_score.safety_indicators_failed error=%s", e)
 
         # 估算流动比率和利息保障倍数（从已有数据推算）
         try:
@@ -102,7 +97,7 @@ class FundamentalScoreService:
                 # 用 ROE 和行业均值估算
                 if result['debt_ratio'] is None:
                     # 矿业行业典型资产负债率 50-65%
-                    result['debt_ratio'] = 58.0  # 紫金矿业 2024 年报约 58%
+                    result['debt_ratio'] = 58.0  # 矿业行业典型资产负债率约 58%
 
         except Exception:
             pass
@@ -110,12 +105,13 @@ class FundamentalScoreService:
         _safety_cache.set(cache_key, result)
         return result
 
-    def calculate_score(self, financial_data: List[dict], safety: Dict) -> Dict:
+    def calculate_score(self, financial_data: List[dict], safety: Dict, stock_code: str = config.DEFAULT_STOCK) -> Dict:
         """计算基本面综合评分
 
         Args:
             financial_data: 财务摘要数据（多期）
             safety: 安全性指标
+            stock_code: 股票代码，用于获取护城河配置
 
         Returns:
             综合评分及各维度详情
@@ -125,6 +121,9 @@ class FundamentalScoreService:
 
         latest = financial_data[0]
         scores = {}
+        # 获取股票配置
+        moat_config = StockRegistry.get_moat_config(stock_code)
+        sector_config = StockRegistry.get_or_default(stock_code).sector_config
 
         # ── 一、赚钱能力（40分）──
         earning_score = 0
@@ -246,8 +245,15 @@ class FundamentalScoreService:
         moat_score = 0
         moat_details = []
 
-        # 护城河（20分）— 紫金矿业硬编码评估
-        moat_count = sum(ZIJIN_MOAT.values())
+        # 护城河（20分）— 从注册表获取配置
+        moat_mapping = {
+            'brand_score': 'brand',
+            'tech_score': 'tech_patent',
+            'cost_score': 'cost_advantage',
+            'resource_score': 'resource_reserve',
+        }
+        moat_flags = {key: moat_config.get(score_key, 0) > 0 for score_key, key in moat_mapping.items()}
+        moat_count = sum(moat_flags.values())
         moat_score = min(moat_count * 5, 20)
         moat_labels = {
             'brand': '品牌壁垒',
@@ -255,7 +261,7 @@ class FundamentalScoreService:
             'cost_advantage': '成本优势',
             'resource_reserve': '资源储备',
         }
-        for key, has in ZIJIN_MOAT.items():
+        for key, has in moat_flags.items():
             if has:
                 moat_details.append({
                     'name': moat_labels.get(key, key),
@@ -269,10 +275,12 @@ class FundamentalScoreService:
         # 赛道（10分）
         sector_score = 0
         sector_details = []
-        if ZIJIN_SECTOR['growth']:
+        growth_score = sector_config.get('growth_score', 0)
+        ceiling_score = sector_config.get('ceiling_score', 0)
+        if growth_score > 0:
             sector_score += 6
             sector_details.append({'name': '行业成长性', 'value': '金铜长期牛市', 'score': 6, 'max': 6, 'status': 'excellent'})
-        if not ZIJIN_SECTOR['ceiling']:
+        if ceiling_score > 0:  # high ceiling = room to grow (good)
             sector_score += 4
             sector_details.append({'name': '天花板', 'value': '需求持续增长', 'score': 4, 'max': 4, 'status': 'excellent'})
 

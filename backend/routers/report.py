@@ -6,13 +6,14 @@ from database import (
     save_reports_batch, get_reports, get_report_detail,
     update_llm_summary, update_alert_flags,
 )
+import config
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.get("/list")
-async def list_reports(code: str = "601899"):
+async def list_reports(code: str = config.DEFAULT_STOCK):
     """获取定期报告列表（自动抓取 + 缓存）"""
     try:
         # 先查 DB
@@ -33,7 +34,7 @@ async def list_reports(code: str = "601899"):
 
 
 @router.get("/detail")
-async def report_detail(code: str = "601899", date: str = ""):
+async def report_detail(code: str = config.DEFAULT_STOCK, date: str = ""):
     """获取单期报告详情"""
     if not date:
         raise HTTPException(status_code=400, detail="date 参数必填（如 2024-12-31）")
@@ -49,7 +50,7 @@ async def report_detail(code: str = "601899", date: str = ""):
 
 @router.get("/comparison")
 async def quarterly_comparison(
-    code: str = "601899",
+    code: str = config.DEFAULT_STOCK,
     periods: int = Query(8, ge=2, le=20),
 ):
     """季度同比环比分析"""
@@ -62,7 +63,7 @@ async def quarterly_comparison(
 
 
 @router.get("/alerts")
-async def report_alerts(code: str = "601899"):
+async def report_alerts(code: str = config.DEFAULT_STOCK):
     """财报预警"""
     try:
         alerts = await report_service.detect_alerts(code)
@@ -73,7 +74,7 @@ async def report_alerts(code: str = "601899"):
 
 
 @router.post("/refresh")
-async def refresh_reports(code: str = "601899"):
+async def refresh_reports(code: str = config.DEFAULT_STOCK):
     """强制刷新报告列表"""
     try:
         reports = await report_service.fetch_report_list(code)

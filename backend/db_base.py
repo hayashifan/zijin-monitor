@@ -1,9 +1,12 @@
 """数据库基础配置 — 共享路径和初始化"""
 import aiosqlite
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 import config
+
+logger = logging.getLogger(__name__)
 
 _DB_DIR = Path(__file__).resolve().parent
 DATABASE_PATH = str((_DB_DIR / config.DATABASE_PATH).resolve())
@@ -137,6 +140,18 @@ async def init_db():
         """)
         await db.commit()
 
+        # ── 业务动向表 ──
+        from db_business import create_business_tables
+        await create_business_tables(db)
+
+        # ── 矿山详情表 ──
+        from db_mine_detail import create_mine_detail_tables
+        await create_mine_detail_tables(db)
+
+        # ── 事件系统表 ──
+        from db_events import create_event_tables
+        await create_event_tables(db)
+
         # ── 清理异常商品数据 ──
         await db.execute("""
             DELETE FROM commodity_history
@@ -186,4 +201,4 @@ async def init_db():
             pass
 
         await db.commit()
-        print("Database initialized successfully")
+        logger.info("db.init_success")

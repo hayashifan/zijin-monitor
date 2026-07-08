@@ -1,10 +1,14 @@
 """
 core.http — 统一 HTTP 客户端
-共享 requests.Session，统一 UA/Referer/trust_env，内置重试
+共享 requests.Session，统一 UA/Referer/trust_env，内置重试（指数退避+抖动）
 """
 import time
+import random
+import logging
 import requests
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
 _DEFAULT_REFERER = 'https://finance.sina.com.cn/'
@@ -32,6 +36,13 @@ def get_session() -> requests.Session:
     return _session
 
 
+def _backoff_delay(attempt: int, base_delay: float = 0.5, max_delay: float = 10.0) -> float:
+    """指数退避 + 随机抖动（±20%）"""
+    delay = min(base_delay * (2 ** attempt), max_delay)
+    jitter = delay * 0.2 * (random.random() * 2 - 1)
+    return delay + jitter
+
+
 def get_sync(
     url: str,
     timeout: int = 10,
@@ -50,10 +61,13 @@ def get_sync(
             if encoding:
                 resp.encoding = encoding
             return resp.text
-        except Exception:
+        except Exception as e:
             if attempt < max_retries - 1:
-                time.sleep(0.5 * (attempt + 1))
+                delay = _backoff_delay(attempt)
+                logger.debug("http.retry url=%s attempt=%d delay=%.2f error=%s", url, attempt + 1, delay, e)
+                time.sleep(delay)
                 continue
+            logger.warning("http.failed url=%s retries=%d error=%s", url, max_retries, e)
             return ""
 
 
@@ -70,8 +84,11 @@ def get_json_sync(
             resp = session.get(url, timeout=timeout, **kwargs)
             resp.raise_for_status()
             return resp.json()
-        except Exception:
+        except Exception as e:
             if attempt < max_retries - 1:
-                time.sleep(0.5 * (attempt + 1))
+                delay = _backoff_delay(attempt)
+                logger.debug("http.retry url=%s attempt=%d delay=%.2f error=%s", url, attempt + 1, delay, e)
+                time.sleep(delay)
                 continue
+            logger.warning("http.failed url=%s retries=%d error=%s", url, max_retries, e)
             return None

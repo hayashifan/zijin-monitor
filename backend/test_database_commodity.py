@@ -13,10 +13,14 @@ from database import (
 
 @pytest.fixture
 def tmp_db(tmp_path):
-    """用临时数据库替换真实 DB"""
+    """用临时数据库替换真实 DB，同时重置全局 Database 单例"""
+    import core.db
     db_path = str(tmp_path / "test.db")
+    # 重置单例，确保每个测试用独立的 Database 实例
+    core.db._db = None
     with patch('db_base.DATABASE_PATH', db_path):
         yield db_path
+    core.db._db = None
 
 
 def _run(coro):

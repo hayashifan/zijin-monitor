@@ -1,0 +1,124 @@
+# 紫金矿业 (601899/02899) 配置
+code: "601899"
+market: "A"
+name: "紫金矿业集团股份有限公司"
+hk_code: "02899"
+sector: "mining"
+total_shares: 26500000000
+
+# 矿山数据
+mines:
+  - id: "zijinshan"
+    name: "紫金山金铜矿"
+    country: "中国"
+    province: "福建上杭"
+    lat: 25.05
+    lng: 116.42
+    equity: 100
+    products: ["gold", "copper"]
+    status: "producing"
+  - id: "kasom Hill"
+    name: "卡莫阿-卡库拉"
+    country: "刚果(金)"
+    lat: -10.85
+    lng: 25.55
+    equity: 45
+    products: ["copper"]
+    status: "producing"
+  - id: "bodzin"
+    name: "博尔齐恩"
+    country: "塞尔维亚"
+    lat: 44.02
+    lng: 21.15
+    equity: 63
+    products: ["copper", "gold"]
+    status: "producing"
+  - id: "tiefeng"
+    name: "铁峰山金矿"
+    country: "中国"
+    province: "甘肃"
+    lat: 35.55
+    lng: 105.72
+    equity: 100
+    products: ["gold"]
+    status: "producing"
+  - id: "sandy"
+    name: "萨彦岭"
+    country: "俄罗斯"
+    lat: 52.55
+    lng: 88.22
+    equity: 50
+    products: ["gold"]
+    status: "producing"
+  - id: "haizigou"
+    name: "海子沟金矿"
+    country: "中国"
+    province: "青海"
+    lat: 36.62
+    lng: 101.75
+    equity: 100
+    products: ["gold"]
+    status: "producing"
+  - id: "gorubunde"
+    name: "戈鲁本德"
+    country: "刚果(金)"
+    lat: -5.85
+    lng: 18.12
+    equity: 50
+    products: ["copper"]
+    status: "exploration"
+  - id: "lukuni"
+    name: "卢库尼"
+    country: "刚果(金)"
+    lat: -10.25
+    lng: 26.15
+    equity: 45
+    products: ["copper"]
+    status: "exploration"
+  - id: "yangshan"
+    name: "阳山金矿"
+    country: "中国"
+    province: "四川"
+    lat: 32.42
+    lng: 102.85
+    equity: 100
+    products: ["gold"]
+    status: "exploration"
+  - id: "jinman"
+    name: "金满铜矿"
+    country: "中国"
+    province: "云南"
+    lat: 25.05
+    lng: 99.15
+    equity: 100
+    products: ["copper"]
+    status: "producing"
+
+# 护城河评分参数
+moat:
+  brand_score: 8
+  brand_desc: "紫金是中国最大金铜矿企，全球前十矿企"
+  tech_score: 7
+  tech_desc: "低品位矿石处理技术领先"
+  cost_score: 9
+  cost_desc: "C1成本低于行业平均"
+  resource_score: 9
+  resource_desc: "金铜资源储量全球前列"
+
+# 赛道评分参数
+sector:
+  growth_score: 8
+  ceiling_score: 9
+  desc: "黄金避险需求+铜新能源需求双轮驱动"
+
+# LLM 摘要模板
+llm_prompt: |
+  你是紫金矿业的财报分析助手。以下是{report_date}的{report_type}关键数据：
+  
+  营收：{revenue}（同比 {revenue_yoy}%）
+  净利润：{net_profit}（同比 {profit_yoy}%）
+  毛利率：{gross_margin}%（同比变化 {margin_change}pp）
+  ROE：{roe}%
+  EPS：{eps}
+  
+  请用 3-5 句话总结这份财报的核心变化，指出亮点和风险。

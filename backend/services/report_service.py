@@ -4,6 +4,7 @@
 """
 import json as _json
 import asyncio
+import logging
 import re
 from datetime import datetime
 from typing import Optional, List, Dict
@@ -12,6 +13,10 @@ from core.http import get_sync
 from core.cache import CacheManager
 from core.utils import safe_float
 from services.fundamental_service import fundamental_service
+from services.stock_registry import StockRegistry
+import config
+
+logger = logging.getLogger(__name__)
 
 # 预警阈值
 ALERT_THRESHOLDS = {
@@ -86,7 +91,7 @@ class ReportService:
             _report_cache.set(cache_key, reports, ttl=3600)
             return reports
         except Exception as e:
-            print(f"[report] Failed to fetch report list: {e}")
+            logger.warning("report.fetch_report_list_failed error=%s", e)
             return []
 
     def _is_periodic_report(self, title: str) -> bool:
@@ -193,7 +198,7 @@ class ReportService:
             _report_cache.set(cache_key, result, ttl=3600)
             return result
         except Exception as e:
-            print(f"[report] Quarterly comparison failed: {e}")
+            logger.warning("report.quarterly_comparison_failed error=%s", e)
             return []
 
     async def detect_alerts(self, stock_code: str) -> List[dict]:
@@ -274,10 +279,11 @@ class ReportService:
             return None
 
         # 构建 prompt
+        company_name = StockRegistry.get_or_default(stock_code).name or "该公司"
         revenue_yoy = f"{target['revenue_yoy']}%" if target.get('revenue_yoy') is not None else "N/A"
         profit_yoy = f"{target['profit_yoy']}%" if target.get('profit_yoy') is not None else "N/A"
 
-        prompt = f"""你是紫金矿业的财报分析助手。以下是{report_date}的财报关键数据：
+        prompt = f"""你是{company_name}的财报分析助手。以下是{report_date}的财报关键数据：
 
 营收：{target.get('revenue', 0)/1e8:.2f}亿（同比 {revenue_yoy}）
 净利润：{target.get('net_profit', 0)/1e8:.2f}亿（同比 {profit_yoy}）
@@ -310,7 +316,7 @@ class ReportService:
             data = resp.json()
             return data.get('choices', [{}])[0].get('message', {}).get('content', '')
         except Exception as e:
-            print(f"[report] LLM summary failed: {e}")
+            logger.warning("report.llm_summary_failed error=%s", e)
             return None
 
 

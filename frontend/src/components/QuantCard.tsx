@@ -18,7 +18,8 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
   );
 
   const bt = data.backtest;
-  const cv = data.cross_validation;
+  const cvAuc = data.cross_validation?.mean_auc ?? data.walk_forward?.oos_auc ?? 0.5;
+  const cvAccuracy = data.cross_validation?.mean_accuracy ?? data.walk_forward?.oos_accuracy ?? 0.5;
   const checks = data.validation_checks;
   const fmtPct = (v: number) => `${(v * 100).toFixed(2)}%`;
   const fmtTime = (ts: string) => ts ? new Date(ts).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '--';
@@ -32,11 +33,11 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
   let signal: string;
   let signalColor: string;
   let signalIcon: string;
-  if (bt.sharpe_ratio >= 1.5 && cv.mean_auc >= 0.55 && passedCount >= 4) {
+  if (bt.sharpe_ratio >= 1.5 && cvAuc >= 0.55 && passedCount >= 4) {
     signal = '强烈看多'; signalColor = UP; signalIcon = '⬆⬆';
-  } else if (bt.sharpe_ratio >= 1.1 && cv.mean_auc >= 0.52 && passedCount >= 3) {
+  } else if (bt.sharpe_ratio >= 1.1 && cvAuc >= 0.52 && passedCount >= 3) {
     signal = '看多'; signalColor = UP; signalIcon = '⬆';
-  } else if (bt.sharpe_ratio >= 0.5 && cv.mean_auc >= 0.50) {
+  } else if (bt.sharpe_ratio >= 0.5 && cvAuc >= 0.50) {
     signal = '中性观望'; signalColor = NEUTRAL; signalIcon = '➡';
   } else if (bt.sharpe_ratio >= 0) {
     signal = '谨慎'; signalColor = '#DAA520'; signalIcon = '⬇';
@@ -48,9 +49,9 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
   let confidence: string;
   let confColor: string;
   let confPct: number;
-  if (cv.mean_auc >= 0.58 && passedCount >= 4) {
+  if (cvAuc >= 0.58 && passedCount >= 4) {
     confidence = '高'; confColor = UP; confPct = 85;
-  } else if (cv.mean_auc >= 0.52 && passedCount >= 3) {
+  } else if (cvAuc >= 0.52 && passedCount >= 3) {
     confidence = '中'; confColor = '#DAA520'; confPct = 55;
   } else {
     confidence = '低'; confColor = DOWN; confPct = 25;
@@ -64,14 +65,14 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
   else position = '空仓等待';
 
   // 持有期建议
-  const holdDays = bt.max_holding_days > 0 ? bt.max_holding_days : 5;
+  const holdDays = (bt.max_holding_days ?? 0) > 0 ? bt.max_holding_days! : 5;
   const holdText = holdDays <= 3 ? '短线' : holdDays <= 10 ? '波段' : '中线';
 
   // 风险提示
   const warnings: string[] = [];
   if (bt.max_drawdown < -0.20) warnings.push(`回撤偏大（${fmtPct(bt.max_drawdown)}），严格止损`);
   if (bt.win_rate < 0.45) warnings.push(`胜率偏低（${fmtPct(bt.win_rate)}），依赖盈亏比补偿`);
-  if (cv.mean_auc < 0.52) warnings.push(`AUC 仅 ${cv.mean_auc.toFixed(3)}，预测能力弱`);
+  if (cvAuc < 0.52) warnings.push(`AUC 仅 ${cvAuc.toFixed(3)}，预测能力弱`);
   if (data.valid_factors < 3) warnings.push(`有效因子仅 ${data.valid_factors} 个，模型可能欠拟合`);
   if (data.data_points < 60) warnings.push(`样本仅 ${data.data_points} 天，统计显著性不足`);
 
@@ -153,12 +154,12 @@ const QuantCard = React.memo(function QuantCard({ data, loading }: QuantCardProp
               <div className="quant-details-grid">
                 <span>模型: {data.model.toUpperCase()}</span>
                 <span>因子: {data.total_factors} 个（{data.valid_factors} 有效）</span>
-                <span>CV 准确率: {fmtPct(cv.mean_accuracy)}</span>
-                <span>CV AUC: {cv.mean_auc.toFixed(3)}</span>
+                <span>CV 准确率: {fmtPct(cvAccuracy)}</span>
+                <span>CV AUC: {cvAuc.toFixed(3)}</span>
                 <span>信息比率: {bt.information_ratio.toFixed(2)}</span>
-                <span>交易次数: {bt.n_trades} / {bt.n_days} 天</span>
+                <span>交易次数: {bt.n_trades} / {bt.n_days ?? '?'} 天</span>
                 <span>持仓比例: {fmtPct(bt.holding_ratio)}</span>
-                <span>交易成本: {(bt.transaction_cost * 1000).toFixed(1)}‰</span>
+                <span>交易成本: {((bt.transaction_cost ?? 0.001) * 1000).toFixed(1)}‰</span>
                 {data.top_factors.length > 0 && (
                   <span style={{gridColumn: '1 / -1'}}>Top 因子: {data.top_factors.slice(0, 5).join(' · ')}</span>
                 )}

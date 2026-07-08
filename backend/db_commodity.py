@@ -1,7 +1,10 @@
 """大宗商品数据表操作"""
+import logging
 from datetime import datetime
 from typing import Optional
 from core.db import get_database
+
+logger = logging.getLogger(__name__)
 
 
 async def save_commodity_price(commodity_data: dict):
@@ -103,4 +106,4 @@ async def cleanup_anomalous_commodity_data():
     deleted = cursor.rowcount
     await conn.commit()
     if deleted > 0:
-        print(f"[commodity] Cleaned {deleted} anomalous history records")
+        logger.info("db_commodity.cleaned_anomalous_records count=%d", deleted)

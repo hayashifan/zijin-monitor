@@ -89,4 +89,15 @@ export const fundamentalScoreAPI = {
     api.get('/api/fundamental-score/score', { params: { code } }),
 };
 
+// Business API (v2.5) — 业务动向
+export const businessAPI = {
+  getMines: () => api.get('/api/business/mines'),
+  getMineDetail: (mineId: string) => api.get(`/api/business/mines/${mineId}`),
+  getProduction: (year?: number) => api.get('/api/business/production', { params: { year } }),
+  getFinance: (reportDate?: string) => api.get('/api/business/finance', { params: { report_date: reportDate } }),
+  getESG: (year?: number) => api.get('/api/business/esg', { params: { year } }),
+  getSensitivity: (year?: number) => api.get('/api/business/sensitivity', { params: { year } }),
+  getOverview: () => api.get('/api/business/overview'),
+};
+
 export default api;

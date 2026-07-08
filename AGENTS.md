@@ -120,11 +120,47 @@ cd backend
 
 ```bash
 cd backend
-./venv/Scripts/python.exe -m pytest -v              # 全量（94 个）
+./venv/Scripts/python.exe -m pytest -v              # 全量
 ./venv/Scripts/python.exe -m pytest test_stock_service.py -v  # 单模块
 ```
 
 测试文件按 `test_{module}_service.py` / `test_{module}.py` 命名。mock 外部 API，不依赖网络。
+
+## CI/CD
+
+### 流水线
+
+`.github/workflows/ci.yml` 定义了两个并行 job：
+
+| Job | 检查项 | 目录 |
+|-----|--------|------|
+| backend-tests | `pytest -v --tb=short` | `backend/` |
+| frontend-build | `npm ci && npm run build` | `frontend/` |
+
+**触发条件**：push 到 main/master 或 PR 目标为 main/master。
+
+### 本地验证
+
+提交前必须通过：
+
+```bash
+# 后端测试
+cd backend && ./venv/Scripts/python.exe -m pytest -v --tb=short
+
+# 前端构建
+cd frontend && npm run build
+```
+
+### 质量门禁
+
+- pytest 全量通过（不允许有 failed）
+- 前端 build 成功
+- **CI 红了不允许合并**
+
+### 测试覆盖率基线
+
+当前：190 passed / 14 failed（commodity_history 相关测试需要 DB migration 修复）。
+目标：0 failed，新增代码必须带测试。
 
 ## 外部依赖
 

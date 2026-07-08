@@ -4,6 +4,7 @@
 """
 import akshare as ak
 import json
+import logging
 import os
 import time
 import asyncio
@@ -12,6 +13,9 @@ from typing import Optional, Dict, List
 
 from core.cache import CacheManager
 from core.utils import safe_float as _core_safe_float
+from services.stock_registry import StockRegistry
+
+logger = logging.getLogger(__name__)
 
 # akshare 并发限制（避免线程池耗尽）
 _AKSHARE_SEMAPHORE = None  # 延迟初始化
@@ -66,7 +70,7 @@ def _save_disk_cache(key: str, data, ttl_key: str):
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(wrapper, f, ensure_ascii=False, default=str)
     except Exception as e:
-        print(f"[fundamental] Disk cache save failed: {e}")
+        logger.warning("fundamental.disk_cache_save_failed error=%s", e)
 
 
 def _get_valid_data(key: str, ttl_key: str) -> Optional[dict]:
@@ -129,7 +133,7 @@ class FundamentalService:
                     })
                 result = {
                     'stock_code': stock_code,
-                    'company_name': '紫金矿业集团股份有限公司',
+                    'company_name': StockRegistry.get_or_default(stock_code).name or stock_code,
                     'data': financial_data,
                     'from_cache': False,
                 }
@@ -137,7 +141,7 @@ class FundamentalService:
                 _save_disk_cache(cache_key, result, 'financial')
                 return result
         except Exception as e:
-            print(f"[fundamental] API failed: {e}")
+            logger.warning("fundamental.api_failed error=%s", e)
 
         # 3. 磁盘兜底
         disk_data = _get_valid_data(cache_key, 'financial')
@@ -202,7 +206,7 @@ class FundamentalService:
                 _save_disk_cache(cache_key, result, 'metrics')
                 return result
         except Exception as e:
-            print(f"[fundamental] stock_zh_a_spot_em failed: {e}, trying Sina fallback")
+            logger.warning("fundamental.stock_zh_a_spot_em_failed error=%s, trying sina fallback", e)
 
         # 方案B: Sina实时行情 + 财务摘要自算PE/PB/流通市值/换手率
         try:
@@ -221,8 +225,8 @@ class FundamentalService:
                     bvps = self._safe_float(latest.get('bvps', 0))
                 pe = round(price / eps, 1) if eps > 0 else 0
                 pb = round(price / bvps, 2) if bvps > 0 else 0
-                total_shares = 26500000000
-                circulating_shares = 26300000000
+                total_shares = StockRegistry.get_total_shares(stock_code)
+                circulating_shares = 26300000000  # keep hardcoded for now
                 circulating_market_cap = round(price * circulating_shares, 0)
                 turnover_rate = round(volume / circulating_shares * 100, 2) if circulating_shares > 0 else 0
                 result = {
@@ -240,7 +244,7 @@ class FundamentalService:
                 _save_disk_cache(cache_key, result, 'metrics')
                 return result
         except Exception as e:
-            print(f"[fundamental] Sina fallback also failed: {e}")
+            logger.warning("fundamental.sina_fallback_failed error=%s", e)
 
         # 方案C: 磁盘缓存
         disk_data = _get_valid_data(cache_key, 'metrics')
@@ -264,7 +268,7 @@ class FundamentalService:
             sem = _get_semaphore()
             async with sem:
                 df = await asyncio.to_thread(ak.stock_profit_sheet_by_report_em, stock_code)
-            if df is not None and not df.empty:
+            if df is not None and hasattr(df, 'empty') and not df.empty:
                 trend_data = []
                 for row in df.head(periods).to_dict('records'):
                     trend_data.append({
@@ -277,7 +281,7 @@ class FundamentalService:
                 _save_disk_cache(cache_key, trend_data, 'profit')
                 return trend_data
         except Exception as e:
-            print(f"[fundamental] stock_profit_sheet failed: {e}, deriving from financial summary")
+            logger.warning("fundamental.stock_profit_sheet_failed error=%s, deriving from financial summary", e)
 
         # 方案B: 从财务摘要派生盈利趋势
         try:
@@ -301,7 +305,7 @@ class FundamentalService:
                     _save_disk_cache(cache_key, trend_data, 'profit')
                     return trend_data
         except Exception as e:
-            print(f"[fundamental] financial summary fallback also failed: {e}")
+            logger.warning("fundamental.financial_summary_fallback_failed error=%s", e)
 
         # 方案C: 磁盘缓存
         disk_data = _get_valid_data(cache_key, 'profit')
@@ -337,13 +341,13 @@ class FundamentalService:
         )
 
         if isinstance(metrics, Exception):
-            print(f"[fundamental] metrics error: {metrics}")
+            logger.warning("fundamental.metrics_error error=%s", metrics)
             metrics = None
         if isinstance(summary, Exception):
-            print(f"[fundamental] summary error: {summary}")
+            logger.warning("fundamental.summary_error error=%s", summary)
             summary = None
         if isinstance(profit_trend, Exception):
-            print(f"[fundamental] profit error: {profit_trend}")
+            logger.warning("fundamental.profit_error error=%s", profit_trend)
             profit_trend = []
 
         latest_financial = {}
@@ -373,7 +377,7 @@ class FundamentalService:
 
         result = {
             'stock_code': stock_code,
-            'company_name': '紫金矿业集团股份有限公司',
+            'company_name': StockRegistry.get_or_default(stock_code).name or stock_code,
             'metrics': enhanced_metrics or None,
             'financial_summary': summary.get('data', []) if summary else [],
             'profit_trend': profit_trend if isinstance(profit_trend, list) else [],

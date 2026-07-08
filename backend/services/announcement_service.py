@@ -2,12 +2,15 @@
 公告爬虫服务 - 东方财富 + 缓存
 """
 import asyncio
+import logging
 from datetime import datetime
 from typing import List, Dict, Optional
 import time
 
 from core.http import get_session
 from core.cache import CacheManager
+
+logger = logging.getLogger(__name__)
 
 
 class AnnouncementService:
@@ -77,7 +80,7 @@ class AnnouncementService:
                         'category': category or '公告',
                     })
                 except Exception as e:
-                    print(f"[announcement] Parse item error: {e}")
+                    logger.warning("announcement.parse_item_error error=%s", e)
                     continue
 
             if announcements:
@@ -86,7 +89,7 @@ class AnnouncementService:
             return announcements
 
         except Exception as e:
-            print(f"[announcement] Error fetching eastmoney announcements: {e}")
+            logger.warning("announcement.fetch_eastmoney_failed error=%s", e)
             return []
 
     async def get_cninfo_announcements(self, stock_code: str, page: int = 1, size: int = 20) -> List[Dict]:
@@ -142,7 +145,7 @@ class AnnouncementService:
             return detail
 
         except Exception as e:
-            print(f"[announcement] Failed to get detail for {art_code}: {e}")
+            logger.warning("announcement.detail_failed art_code=%s error=%s", art_code, e)
             return None
 
 

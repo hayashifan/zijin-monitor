@@ -98,11 +98,18 @@ export interface QuantReport {
   total_factors: number;
   valid_factors: number;
   top_factors: string[];
-  cross_validation: {
+  cross_validation?: {
     accuracies: number[];
     mean_accuracy: number;
     mean_auc: number;
     confidence: number;
+  };
+  walk_forward?: {
+    n_windows: number;
+    n_oos_samples: number;
+    oos_accuracy: number;
+    oos_auc: number;
+    oos_sharpe: number;
   };
   backtest: {
     sharpe_ratio: number;
@@ -113,10 +120,10 @@ export interface QuantReport {
     profit_loss_ratio: number;
     information_ratio: number;
     n_trades: number;
-    n_days: number;
+    n_days?: number;
     holding_ratio: number;
-    transaction_cost: number;
-    max_holding_days: number;
+    transaction_cost?: number;
+    max_holding_days?: number;
   };
   validation_checks: Record<string, boolean>;
   all_passed: boolean;
@@ -242,4 +249,82 @@ export interface ReportAlert {
   type: string;                  // profit_decline / revenue_decline / roe_low / eps_decline / normal
   message: string;
   report_date: string;
+}
+
+// ── 业务动向 v2.5 ──────────────────────────────
+
+export interface MineInfo {
+  mine_id: string;
+  mine_name: string;
+  mine_name_en: string;
+  country: string;
+  country_code: string;
+  latitude: number;
+  longitude: number;
+  primary_products: string[];    // ["金", "铜"]
+  status: '运营中' | '建设中' | '停产';
+  equity_ratio: number;          // 权益比例 %
+  description: string;
+  // 动态数据（可选）
+  resource_gold_ton?: number;    // 金资源量（吨）
+  resource_copper_ton?: number;  // 铜资源量（万吨）
+  resource_zinc_ton?: number;    // 锌资源量（万吨）
+  reserve_gold_ton?: number;     // 金储量（吨）
+  reserve_copper_ton?: number;   // 铜储量（万吨）
+  reserve_zinc_ton?: number;     // 锌储量（万吨）
+}
+
+export interface ProductionPlan {
+  year: number;
+  product_type: string;          // 金/铜/锌
+  unit: string;                  // 吨/万吨
+  plan_output: number | null;
+  actual_output: number | null;
+  completion_rate: number | null;
+  report_type: string;           // 年度/半年度/季度
+  report_date: string;
+}
+
+export interface SegmentFinance {
+  report_date: string;
+  report_type: string;
+  segment: string;               // 金/铜/锌/其他
+  revenue: number | null;
+  cost: number | null;
+  gross_profit: number | null;
+  gross_margin: number | null;
+  ebitda: number | null;
+  c1_cost: number | null;        // C1现金成本
+  aisc: number | null;           // AISC
+  cost_unit: string | null;
+}
+
+export interface ESGData {
+  year: number;
+  ltifr: number | null;          // 百万工时损工率
+  trifr: number | null;          // 可记录伤害率
+  carbon_intensity: number | null; // 碳排放强度
+  water_recycle_rate: number | null; // 水循环利用率
+  energy_intensity: number | null; // 综合能耗
+  community_investment: number | null; // 社区投资
+  local_employment_rate: number | null; // 本地化雇佣率
+  greening_area: number | null;  // 绿化面积
+  land_reclamation_rate: number | null; // 土地复垦率
+  env_incidents: number | null;  // 环境事件数
+}
+
+export interface PriceSensitivity {
+  year: number;
+  product: string;               // 金/铜/锌
+  price_change_pct: number;      // 价格变动 %
+  profit_impact: number;         // 净利润影响（亿元）
+  source: string;
+}
+
+export interface BusinessOverview {
+  mines_count: number;
+  countries_count: number;
+  production: ProductionPlan[];
+  finance: SegmentFinance[];
+  esg: ESGData[];
 }
